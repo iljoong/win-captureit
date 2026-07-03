@@ -49,10 +49,11 @@ public sealed class CaptureController
         {
             var monitors = MonitorService.GetMonitors();
             var virtualDesktopBounds = MonitorService.GetVirtualDesktopBounds(monitors);
+            var settings = _settingsService.Load();
 
             using var frozenDesktop = ScreenCaptureService.CaptureVirtualDesktop(virtualDesktopBounds);
 
-            var lastRegion = _settingsService.Load().LastRegion?.ToRectangle();
+            var lastRegion = settings.LastRegion?.ToRectangle();
             var overlay = new RegionSelectOverlayWindow(frozenDesktop, virtualDesktopBounds, lastRegion);
             overlay.ShowDialog();
 
@@ -61,7 +62,7 @@ public sealed class CaptureController
                 return; // Cancelled.
             }
 
-            using var cropped = ScreenCaptureService.CropRegion(frozenDesktop, virtualDesktopBounds, selectedRegion);
+            using var cropped = CaptureRegionBitmap(settings.CaptureDelaySeconds, frozenDesktop, virtualDesktopBounds, selectedRegion);
             SaveAndRemember(cropped, CaptureMode.Region, lastRegion: selectedRegion);
         }
         catch (Exception ex)
@@ -85,6 +86,7 @@ public sealed class CaptureController
         {
             var monitors = MonitorService.GetMonitors();
             var virtualDesktopBounds = MonitorService.GetVirtualDesktopBounds(monitors);
+            var settings = _settingsService.Load();
 
             using var frozenDesktop = ScreenCaptureService.CaptureVirtualDesktop(virtualDesktopBounds);
 
@@ -96,7 +98,7 @@ public sealed class CaptureController
             }
             else
             {
-                var lastMonitorDeviceName = _settingsService.Load().LastMonitorDeviceName;
+                var lastMonitorDeviceName = settings.LastMonitorDeviceName;
                 var picker = new MonitorPickerOverlayWindow(frozenDesktop, virtualDesktopBounds, monitors, lastMonitorDeviceName);
                 picker.ShowDialog();
                 chosenMonitor = picker.Result;
@@ -107,7 +109,7 @@ public sealed class CaptureController
                 return; // Cancelled.
             }
 
-            using var cropped = ScreenCaptureService.CropMonitor(frozenDesktop, virtualDesktopBounds, chosenMonitor);
+            using var cropped = CaptureMonitorBitmap(settings.CaptureDelaySeconds, frozenDesktop, virtualDesktopBounds, chosenMonitor);
             SaveAndRemember(cropped, CaptureMode.FullScreen, lastMonitorDeviceName: chosenMonitor.DeviceName);
         }
         catch (Exception ex)
@@ -168,4 +170,36 @@ public sealed class CaptureController
     }
 
     private void EndCapture() => _captureInProgress = false;
+
+    private static System.Drawing.Bitmap CaptureRegionBitmap(
+        int captureDelaySeconds,
+        System.Drawing.Bitmap frozenDesktop,
+        System.Drawing.Rectangle virtualDesktopBounds,
+        System.Drawing.Rectangle selectedRegion)
+    {
+        if (captureDelaySeconds <= 0)
+        {
+            return ScreenCaptureService.CropRegion(frozenDesktop, virtualDesktopBounds, selectedRegion);
+        }
+
+        Thread.Sleep(TimeSpan.FromSeconds(captureDelaySeconds));
+        using var delayedDesktop = ScreenCaptureService.CaptureVirtualDesktop(virtualDesktopBounds);
+        return ScreenCaptureService.CropRegion(delayedDesktop, virtualDesktopBounds, selectedRegion);
+    }
+
+    private static System.Drawing.Bitmap CaptureMonitorBitmap(
+        int captureDelaySeconds,
+        System.Drawing.Bitmap frozenDesktop,
+        System.Drawing.Rectangle virtualDesktopBounds,
+        MonitorInfo chosenMonitor)
+    {
+        if (captureDelaySeconds <= 0)
+        {
+            return ScreenCaptureService.CropMonitor(frozenDesktop, virtualDesktopBounds, chosenMonitor);
+        }
+
+        Thread.Sleep(TimeSpan.FromSeconds(captureDelaySeconds));
+        using var delayedDesktop = ScreenCaptureService.CaptureVirtualDesktop(virtualDesktopBounds);
+        return ScreenCaptureService.CropMonitor(delayedDesktop, virtualDesktopBounds, chosenMonitor);
+    }
 }

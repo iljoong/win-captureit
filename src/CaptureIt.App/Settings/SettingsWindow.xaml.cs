@@ -32,6 +32,7 @@ public partial class SettingsWindow : Window
         SaveFolderTextBox.Text = _workingCopy.SaveFolder;
         FilenamePatternTextBox.Text = _workingCopy.FilenamePattern;
         HotkeyTextBox.Text = _pendingHotkey.ToString();
+        SetSelectedCaptureDelay(_workingCopy.CaptureDelaySeconds);
         UpdateFilenamePreview();
     }
 
@@ -128,6 +129,7 @@ public partial class SettingsWindow : Window
             ? "Screenshot_{datetime}"
             : FilenamePatternTextBox.Text;
         _workingCopy.Hotkey = _pendingHotkey;
+        _workingCopy.CaptureDelaySeconds = GetSelectedCaptureDelaySeconds();
 
         _settingsService.Save(_workingCopy);
 
@@ -147,4 +149,25 @@ public partial class SettingsWindow : Window
         DialogResult = false;
         Close();
     }
+
+    private void SetSelectedCaptureDelay(int captureDelaySeconds)
+    {
+        var normalized = AppSettings.NormalizeCaptureDelaySeconds(captureDelaySeconds);
+        foreach (var item in CaptureDelayComboBox.Items.OfType<System.Windows.Controls.ComboBoxItem>())
+        {
+            if (item.Tag?.ToString() == normalized.ToString())
+            {
+                CaptureDelayComboBox.SelectedItem = item;
+                return;
+            }
+        }
+
+        CaptureDelayComboBox.SelectedIndex = 0;
+    }
+
+    private int GetSelectedCaptureDelaySeconds()
+        => CaptureDelayComboBox.SelectedItem is System.Windows.Controls.ComboBoxItem item
+            && int.TryParse(item.Tag?.ToString(), out var captureDelaySeconds)
+            ? AppSettings.NormalizeCaptureDelaySeconds(captureDelaySeconds)
+            : 0;
 }

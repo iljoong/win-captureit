@@ -8,6 +8,8 @@ namespace CaptureIt.App.Models;
 /// </summary>
 public sealed class AppSettings
 {
+    public static readonly int[] SupportedCaptureDelaySeconds = [0, 3, 5, 10];
+
     /// <summary>Folder screenshots are saved to. Falls back to %Pictures%\CaptureIt if invalid at save time.</summary>
     public string SaveFolder { get; set; } = DefaultSaveFolder;
 
@@ -39,8 +41,16 @@ public sealed class AppSettings
     /// <summary>The user-configurable global hotkey. Defaults to Ctrl+Alt+S.</summary>
     public HotkeyDefinition Hotkey { get; set; } = HotkeyDefinition.Default;
 
+    /// <summary>
+    /// Delay before taking a capture, in seconds. A value of 0 captures immediately.
+    /// </summary>
+    public int CaptureDelaySeconds { get; set; }
+
     public static string DefaultSaveFolder =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "CaptureIt");
 
     public static string FallbackSaveFolder => DefaultSaveFolder;
+
+    public static int NormalizeCaptureDelaySeconds(int captureDelaySeconds)
+        => SupportedCaptureDelaySeconds.Contains(captureDelaySeconds) ? captureDelaySeconds : 0;
 }

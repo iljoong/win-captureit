@@ -68,6 +68,7 @@ public class SettingsServiceTests : IDisposable
         settings.LastCaptureMode = CaptureMode.FullScreen;
         settings.FilenamePattern = "Custom_{date}";
         settings.SaveFolder = _tempDir;
+        settings.CaptureDelaySeconds = 5;
 
         service.Save(settings);
         var reloaded = service.Load();
@@ -75,6 +76,7 @@ public class SettingsServiceTests : IDisposable
         Assert.Equal(CaptureMode.FullScreen, reloaded.LastCaptureMode);
         Assert.Equal("Custom_{date}", reloaded.FilenamePattern);
         Assert.Equal(_tempDir, reloaded.SaveFolder);
+        Assert.Equal(5, reloaded.CaptureDelaySeconds);
     }
 
     [Fact]
@@ -86,5 +88,23 @@ public class SettingsServiceTests : IDisposable
         var settings = service.Load();
 
         Assert.False(string.IsNullOrWhiteSpace(settings.SaveFolder));
+    }
+
+    [Fact]
+    public void Load_WhenCaptureDelayIsUnsupported_FallsBackToImmediate()
+    {
+        var json = JsonSerializer.Serialize(new
+        {
+            SaveFolder = _tempDir,
+            FilenamePattern = "x",
+            LastCaptureMode = 0,
+            CaptureDelaySeconds = 7,
+            Hotkey = new { Modifiers = 2, VirtualKey = 0x53 }
+        });
+        var service = CreateServiceWithFile(json);
+
+        var settings = service.Load();
+
+        Assert.Equal(0, settings.CaptureDelaySeconds);
     }
 }

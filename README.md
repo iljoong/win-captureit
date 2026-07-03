@@ -17,6 +17,8 @@ A Windows-only screenshot capture tool (.NET 10, WPF) that runs in the system tr
   pattern (default `Screenshot_{datetime}.png`), with automatic collision suffixing
   (`_001`, `_002`, ...) and automatic fallback to `%Pictures%\CaptureIt` if the
   configured folder becomes unavailable.
+- An optional capture delay (`Off`, `3s`, `5s`, `10s`) lets you choose the region or
+  monitor first, then take the screenshot after a short countdown.
 - Silent on successful captures; shows a Windows notification only on failures
   (e.g. hotkey conflicts, save-folder problems).
 - Settings persisted as JSON at `%AppData%\CaptureIt\settings.json`.
