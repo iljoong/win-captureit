@@ -47,12 +47,12 @@ public partial class App : System.Windows.Application
         _trayIconManager = new TrayIconManager();
         _captureController = new CaptureController(_settingsService, _trayIconManager);
 
-        _trayIconManager.CaptureRegionRequested += (_, _) => _captureController.CaptureRegion();
-        _trayIconManager.CaptureFullScreenRequested += (_, _) => _captureController.CaptureFullScreen();
+        _trayIconManager.CaptureRegionRequested += async (_, _) => await _captureController.CaptureRegion();
+        _trayIconManager.CaptureFullScreenRequested += async (_, _) => await _captureController.CaptureFullScreen();
         _trayIconManager.SettingsRequested += (_, _) => OpenSettings();
         _trayIconManager.ExitRequested += (_, _) => Shutdown();
 
-        _hotkeyManager.HotkeyPressed += (_, _) => _captureController.CaptureLastUsedMode();
+        _hotkeyManager.HotkeyPressed += async (_, _) => await _captureController.CaptureLastUsedMode();
 
         var initialSettings = _settingsService.Load();
         if (!_hotkeyManager.TryRegister(initialSettings.Hotkey))

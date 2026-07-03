@@ -25,20 +25,15 @@ public sealed class CaptureController
     }
 
     /// <summary>Repeats whichever mode was last used (for the global hotkey).</summary>
-    public void CaptureLastUsedMode()
+    public Task CaptureLastUsedMode()
     {
         var settings = _settingsService.Load();
-        if (settings.LastCaptureMode == CaptureMode.Region)
-        {
-            CaptureRegion();
-        }
-        else
-        {
-            CaptureFullScreen();
-        }
+        return settings.LastCaptureMode == CaptureMode.Region
+            ? CaptureRegion()
+            : CaptureFullScreen();
     }
 
-    public async void CaptureRegion()
+    public async Task CaptureRegion()
     {
         if (!BeginCapture())
         {
@@ -75,7 +70,7 @@ public sealed class CaptureController
         }
     }
 
-    public async void CaptureFullScreen()
+    public async Task CaptureFullScreen()
     {
         if (!BeginCapture())
         {
