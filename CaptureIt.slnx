@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CaptureIt.App/CaptureIt.App.csproj" />
+    <Project Path="src/CaptureIt.Tests/CaptureIt.Tests.csproj" />
+  </Folder>
+</Solution>
