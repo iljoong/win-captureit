@@ -47,12 +47,12 @@ public partial class App : System.Windows.Application
         _trayIconManager = new TrayIconManager();
         _captureController = new CaptureController(_settingsService, _trayIconManager);
 
-        _trayIconManager.CaptureRegionRequested += async (_, _) => await _captureController.CaptureRegion();
-        _trayIconManager.CaptureFullScreenRequested += async (_, _) => await _captureController.CaptureFullScreen();
+        _trayIconManager.CaptureRegionRequested += (_, _) => _ = RunCaptureAsync(() => _captureController.CaptureRegion());
+        _trayIconManager.CaptureFullScreenRequested += (_, _) => _ = RunCaptureAsync(() => _captureController.CaptureFullScreen());
         _trayIconManager.SettingsRequested += (_, _) => OpenSettings();
         _trayIconManager.ExitRequested += (_, _) => Shutdown();
 
-        _hotkeyManager.HotkeyPressed += async (_, _) => await _captureController.CaptureLastUsedMode();
+        _hotkeyManager.HotkeyPressed += (_, _) => _ = RunCaptureAsync(() => _captureController.CaptureLastUsedMode());
 
         var initialSettings = _settingsService.Load();
         if (!_hotkeyManager.TryRegister(initialSettings.Hotkey))
@@ -95,6 +95,18 @@ public partial class App : System.Windows.Application
         };
         window.Activate();
         window.ShowDialog();
+    }
+
+    private async Task RunCaptureAsync(Func<Task> captureAsync)
+    {
+        try
+        {
+            await captureAsync();
+        }
+        catch (Exception ex)
+        {
+            _trayIconManager?.ShowFailureNotification("Screenshot failed", ex.Message);
+        }
     }
 
     protected override void OnExit(ExitEventArgs e)
