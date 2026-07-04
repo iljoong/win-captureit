@@ -167,7 +167,7 @@ public partial class SettingsWindow : Window
 
     private int GetSelectedCaptureDelaySeconds()
         => CaptureDelayComboBox.SelectedItem is System.Windows.Controls.ComboBoxItem item
-            && int.TryParse(item.Tag?.ToString(), out var captureDelaySeconds)
-            ? AppSettings.NormalizeCaptureDelaySeconds(captureDelaySeconds)
+            && int.TryParse(item.Tag?.ToString(), out var selectedDelaySeconds)
+            ? AppSettings.NormalizeCaptureDelaySeconds(selectedDelaySeconds)
             : 0;
 }
