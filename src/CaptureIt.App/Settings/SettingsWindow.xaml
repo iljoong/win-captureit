@@ -51,7 +51,7 @@
                     <ComboBoxItem Content="5 seconds" Tag="5" />
                     <ComboBoxItem Content="10 seconds" Tag="10" />
                 </ComboBox>
-                <TextBlock Text="For delayed captures, choose the region or monitor first, then set up the screen during the countdown." Margin="0,6,0,0" FontSize="11" Foreground="Gray" TextWrapping="Wrap" />
+                <TextBlock Text="When a delay is enabled, CaptureIt waits before opening the region or monitor picker." Margin="0,6,0,0" FontSize="11" Foreground="Gray" TextWrapping="Wrap" />
             </StackPanel>
         </GroupBox>
 

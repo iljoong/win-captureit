@@ -42,9 +42,11 @@ public sealed class CaptureController
 
         try
         {
+            var settings = _settingsService.Load();
+            await DelayBeforeCaptureAsync(settings.CaptureDelaySeconds);
+
             var monitors = MonitorService.GetMonitors();
             var virtualDesktopBounds = MonitorService.GetVirtualDesktopBounds(monitors);
-            var settings = _settingsService.Load();
 
             using var frozenDesktop = ScreenCaptureService.CaptureVirtualDesktop(virtualDesktopBounds);
 
@@ -57,7 +59,7 @@ public sealed class CaptureController
                 return; // Cancelled.
             }
 
-            using var cropped = await CaptureRegionBitmapAsync(settings.CaptureDelaySeconds, frozenDesktop, virtualDesktopBounds, selectedRegion);
+            using var cropped = ScreenCaptureService.CropRegion(frozenDesktop, virtualDesktopBounds, selectedRegion);
             SaveAndRemember(cropped, CaptureMode.Region, lastRegion: selectedRegion);
         }
         catch (Exception ex)
@@ -79,9 +81,11 @@ public sealed class CaptureController
 
         try
         {
+            var settings = _settingsService.Load();
+            await DelayBeforeCaptureAsync(settings.CaptureDelaySeconds);
+
             var monitors = MonitorService.GetMonitors();
             var virtualDesktopBounds = MonitorService.GetVirtualDesktopBounds(monitors);
-            var settings = _settingsService.Load();
 
             using var frozenDesktop = ScreenCaptureService.CaptureVirtualDesktop(virtualDesktopBounds);
 
@@ -104,7 +108,7 @@ public sealed class CaptureController
                 return; // Cancelled.
             }
 
-            using var cropped = await CaptureMonitorBitmapAsync(settings.CaptureDelaySeconds, frozenDesktop, virtualDesktopBounds, chosenMonitor);
+            using var cropped = ScreenCaptureService.CropMonitor(frozenDesktop, virtualDesktopBounds, chosenMonitor);
             SaveAndRemember(cropped, CaptureMode.FullScreen, lastMonitorDeviceName: chosenMonitor.DeviceName);
         }
         catch (Exception ex)
@@ -166,35 +170,13 @@ public sealed class CaptureController
 
     private void EndCapture() => _captureInProgress = false;
 
-    private static async Task<System.Drawing.Bitmap> CaptureRegionBitmapAsync(
-        int captureDelaySeconds,
-        System.Drawing.Bitmap frozenDesktop,
-        System.Drawing.Rectangle virtualDesktopBounds,
-        System.Drawing.Rectangle selectedRegion)
+    private static Task DelayBeforeCaptureAsync(int captureDelaySeconds)
     {
         if (captureDelaySeconds <= 0)
         {
-            return ScreenCaptureService.CropRegion(frozenDesktop, virtualDesktopBounds, selectedRegion);
+            return Task.CompletedTask;
         }
 
-        await Task.Delay(TimeSpan.FromSeconds(captureDelaySeconds));
-        using var delayedDesktop = ScreenCaptureService.CaptureVirtualDesktop(virtualDesktopBounds);
-        return ScreenCaptureService.CropRegion(delayedDesktop, virtualDesktopBounds, selectedRegion);
-    }
-
-    private static async Task<System.Drawing.Bitmap> CaptureMonitorBitmapAsync(
-        int captureDelaySeconds,
-        System.Drawing.Bitmap frozenDesktop,
-        System.Drawing.Rectangle virtualDesktopBounds,
-        MonitorInfo chosenMonitor)
-    {
-        if (captureDelaySeconds <= 0)
-        {
-            return ScreenCaptureService.CropMonitor(frozenDesktop, virtualDesktopBounds, chosenMonitor);
-        }
-
-        await Task.Delay(TimeSpan.FromSeconds(captureDelaySeconds));
-        using var delayedDesktop = ScreenCaptureService.CaptureVirtualDesktop(virtualDesktopBounds);
-        return ScreenCaptureService.CropMonitor(delayedDesktop, virtualDesktopBounds, chosenMonitor);
+        return Task.Delay(TimeSpan.FromSeconds(captureDelaySeconds));
     }
 }
