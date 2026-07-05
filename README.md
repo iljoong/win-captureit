@@ -13,6 +13,11 @@ A Windows-only screenshot capture tool (.NET 10, WPF) that runs in the system tr
 - A single global hotkey (default **Ctrl+Alt+S**, remappable in Settings) repeats
   whichever mode (region or full-screen) was last used, and pre-shows the last
   region / last monitor so pressing **Enter** re-captures the same selection.
+- Optional **capture delay** (Off, 3s, 5s, or 10s, set in Settings): when you start a
+  capture, a countdown runs first so you have time to set up a transient UI state
+  (open a menu, hover a tooltip); the desktop is frozen the moment the countdown ends
+  and you then select the region/monitor. Applies to both region and full-screen
+  capture and stays non-blocking in the tray app.
 - Screenshots are saved as PNG to a configured folder, using a configurable filename
   pattern (default `Screenshot_{datetime}.png`), with automatic collision suffixing
   (`_001`, `_002`, ...) and automatic fallback to `%Pictures%\CaptureIt` if the

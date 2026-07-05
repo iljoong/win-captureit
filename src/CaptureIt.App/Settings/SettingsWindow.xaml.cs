@@ -32,8 +32,26 @@ public partial class SettingsWindow : Window
         SaveFolderTextBox.Text = _workingCopy.SaveFolder;
         FilenamePatternTextBox.Text = _workingCopy.FilenamePattern;
         HotkeyTextBox.Text = _pendingHotkey.ToString();
+        PopulateCaptureDelayChoices();
         UpdateFilenamePreview();
     }
+
+    /// <summary>
+    /// Surfaces the capture delay as a fixed set of choices (Off, 3s, 5s, 10s) rather
+    /// than free-form input, so only supported values can ever be selected/saved.
+    /// </summary>
+    private void PopulateCaptureDelayChoices()
+    {
+        CaptureDelayComboBox.ItemsSource = AppSettings.SupportedCaptureDelays
+            .Select(seconds => new DelayChoice(
+                seconds == 0 ? "Off" : $"{seconds} seconds", seconds))
+            .ToList();
+        CaptureDelayComboBox.DisplayMemberPath = nameof(DelayChoice.Label);
+        CaptureDelayComboBox.SelectedValuePath = nameof(DelayChoice.Seconds);
+        CaptureDelayComboBox.SelectedValue = AppSettings.NormalizeCaptureDelay(_workingCopy.CaptureDelaySeconds);
+    }
+
+    private sealed record DelayChoice(string Label, int Seconds);
 
     private void OnBrowseFolderClick(object sender, RoutedEventArgs e)
     {
@@ -128,6 +146,8 @@ public partial class SettingsWindow : Window
             ? "Screenshot_{datetime}"
             : FilenamePatternTextBox.Text;
         _workingCopy.Hotkey = _pendingHotkey;
+        _workingCopy.CaptureDelaySeconds = AppSettings.NormalizeCaptureDelay(
+            CaptureDelayComboBox.SelectedValue is int seconds ? seconds : 0);
 
         _settingsService.Save(_workingCopy);
 

@@ -39,6 +39,25 @@ public sealed class AppSettings
     /// <summary>The user-configurable global hotkey. Defaults to Ctrl+Alt+S.</summary>
     public HotkeyDefinition Hotkey { get; set; } = HotkeyDefinition.Default;
 
+    /// <summary>
+    /// Countdown, in seconds, between confirming the region/monitor and taking the
+    /// actual screenshot. Lets the user set up a transient UI state (open a menu,
+    /// hover a tooltip) before the shot fires. 0 means capture immediately. Only the
+    /// values in <see cref="SupportedCaptureDelays"/> are valid; any other value is
+    /// normalized back to 0 on load (see <see cref="NormalizeCaptureDelay"/>).
+    /// </summary>
+    public int CaptureDelaySeconds { get; set; }
+
+    /// <summary>The delay values the UI offers and the only ones treated as valid. 0 = Off.</summary>
+    public static readonly IReadOnlyList<int> SupportedCaptureDelays = new[] { 0, 3, 5, 10 };
+
+    /// <summary>
+    /// Coerces an arbitrary (possibly hand-edited or corrupted) delay value to a
+    /// supported one, falling back to 0 (immediate capture) for anything unsupported.
+    /// </summary>
+    public static int NormalizeCaptureDelay(int value)
+        => SupportedCaptureDelays.Contains(value) ? value : 0;
+
     public static string DefaultSaveFolder =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "CaptureIt");
 

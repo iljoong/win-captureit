@@ -87,4 +87,46 @@ public class SettingsServiceTests : IDisposable
 
         Assert.False(string.IsNullOrWhiteSpace(settings.SaveFolder));
     }
+
+    [Fact]
+    public void Load_WhenCaptureDelayUnsupported_NormalizesToImmediate()
+    {
+        var json = JsonSerializer.Serialize(new
+        {
+            SaveFolder = _tempDir,
+            FilenamePattern = "x",
+            LastCaptureMode = 0,
+            CaptureDelaySeconds = 7,
+            Hotkey = new { Modifiers = 2, VirtualKey = 0x53 }
+        });
+        var service = CreateServiceWithFile(json);
+
+        var settings = service.Load();
+
+        Assert.Equal(0, settings.CaptureDelaySeconds);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(3)]
+    [InlineData(5)]
+    [InlineData(10)]
+    public void SaveThenLoad_PreservesSupportedCaptureDelay(int delay)
+    {
+        var service = CreateServiceWithFile();
+        var settings = service.Load();
+        settings.SaveFolder = _tempDir;
+        settings.CaptureDelaySeconds = delay;
+
+        service.Save(settings);
+        var reloaded = service.Load();
+
+        Assert.Equal(delay, reloaded.CaptureDelaySeconds);
+    }
+
+    [Fact]
+    public void NewSettings_DefaultCaptureDelayIsImmediate()
+    {
+        Assert.Equal(0, new AppSettings().CaptureDelaySeconds);
+    }
 }

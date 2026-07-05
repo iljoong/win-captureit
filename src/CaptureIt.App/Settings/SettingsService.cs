@@ -63,6 +63,7 @@ public sealed class SettingsService
                 settings.FilenamePattern = new AppSettings().FilenamePattern;
             }
             settings.Hotkey ??= HotkeyDefinition.Default;
+            settings.CaptureDelaySeconds = AppSettings.NormalizeCaptureDelay(settings.CaptureDelaySeconds);
 
             return settings;
         }
