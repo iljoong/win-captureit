@@ -32,6 +32,7 @@ public partial class SettingsWindow : Window
         SaveFolderTextBox.Text = _workingCopy.SaveFolder;
         FilenamePatternTextBox.Text = _workingCopy.FilenamePattern;
         HotkeyTextBox.Text = _pendingHotkey.ToString();
+        OcrEnabledCheckBox.IsChecked = _workingCopy.OcrEnabled;
         PopulateCaptureDelayChoices();
         UpdateFilenamePreview();
     }
@@ -148,6 +149,7 @@ public partial class SettingsWindow : Window
         _workingCopy.Hotkey = _pendingHotkey;
         _workingCopy.CaptureDelaySeconds = AppSettings.NormalizeCaptureDelay(
             CaptureDelayComboBox.SelectedValue is int seconds ? seconds : 0);
+        _workingCopy.OcrEnabled = OcrEnabledCheckBox.IsChecked == true;
 
         _settingsService.Save(_workingCopy);
 
