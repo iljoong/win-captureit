@@ -1,0 +1,28 @@
+<Window x:Class="CaptureIt.App.Overlays.CountdownOverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        Topmost="True"
+        WindowStartupLocation="CenterScreen"
+        SizeToContent="WidthAndHeight"
+        IsHitTestVisible="False">
+    <Border CornerRadius="12" Padding="28,16" Background="#CC000000">
+        <StackPanel>
+            <TextBlock x:Name="CountdownText"
+                       Text="3"
+                       FontSize="72"
+                       FontWeight="Bold"
+                       Foreground="White"
+                       HorizontalAlignment="Center" />
+            <TextBlock Text="Set up your screen…"
+                       FontSize="14"
+                       Foreground="#DDFFFFFF"
+                       HorizontalAlignment="Center"
+                       Margin="0,4,0,0" />
+        </StackPanel>
+    </Border>
+</Window>

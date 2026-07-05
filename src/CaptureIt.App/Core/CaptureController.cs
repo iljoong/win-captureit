@@ -50,6 +50,12 @@ public sealed class CaptureController
             var monitors = MonitorService.GetMonitors();
             var virtualDesktopBounds = MonitorService.GetVirtualDesktopBounds(monitors);
 
+            // If a delay is configured, count down first (letting the user set up
+            // transient UI), then freeze the desktop — the frozen image is the moment
+            // just before the overlay appears, so the transient UI is included but the
+            // countdown/overlay never leak into the shot.
+            CountdownOverlayWindow.Run(_settingsService.Load().CaptureDelaySeconds);
+
             using var frozenDesktop = ScreenCaptureService.CaptureVirtualDesktop(virtualDesktopBounds);
 
             var lastRegion = _settingsService.Load().LastRegion?.ToRectangle();
@@ -85,6 +91,12 @@ public sealed class CaptureController
         {
             var monitors = MonitorService.GetMonitors();
             var virtualDesktopBounds = MonitorService.GetVirtualDesktopBounds(monitors);
+
+            // If a delay is configured, count down first (letting the user set up
+            // transient UI), then freeze the desktop — the frozen image is the moment
+            // just before the overlay appears, so the transient UI is included but the
+            // countdown/overlay never leak into the shot.
+            CountdownOverlayWindow.Run(_settingsService.Load().CaptureDelaySeconds);
 
             using var frozenDesktop = ScreenCaptureService.CaptureVirtualDesktop(virtualDesktopBounds);
 
@@ -155,6 +167,24 @@ public sealed class CaptureController
             settings.LastMonitorDeviceName = lastMonitorDeviceName;
         }
         _settingsService.Save(settings);
+    }
+
+    /// <summary>
+    /// When a capture delay is configured, shows the countdown overlay (giving the
+    /// user time to set up a transient UI state) and then re-captures the live desktop
+    /// so that state is included in the screenshot. Returns the fresh capture, which
+    /// the caller owns and must dispose; returns null when no delay is configured, in
+    /// which case the caller should crop the already-frozen desktop instead.
+    /// </summary>
+    private static System.Drawing.Bitmap? ApplyCaptureDelay(int delaySeconds, System.Drawing.Rectangle virtualDesktopBounds)
+    {
+        if (delaySeconds <= 0)
+        {
+            return null;
+        }
+
+        Overlays.CountdownOverlayWindow.Run(delaySeconds);
+        return ScreenCaptureService.CaptureVirtualDesktop(virtualDesktopBounds);
     }
 
     private bool BeginCapture()
