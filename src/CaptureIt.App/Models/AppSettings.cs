@@ -48,6 +48,13 @@ public sealed class AppSettings
     /// </summary>
     public int CaptureDelaySeconds { get; set; }
 
+    /// <summary>
+    /// When enabled, runs OCR (via Windows.Media.Ocr) on every captured screenshot and
+    /// saves the extracted text alongside the image as a .txt file with the same base
+    /// filename. Disabled by default.
+    /// </summary>
+    public bool OcrEnabled { get; set; }
+
     /// <summary>The delay values the UI offers and the only ones treated as valid. 0 = Off.</summary>
     public static readonly IReadOnlyList<int> SupportedCaptureDelays = new[] { 0, 3, 5, 10 };
 

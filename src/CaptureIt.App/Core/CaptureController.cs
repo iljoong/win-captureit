@@ -3,6 +3,7 @@ using CaptureIt.App.Models;
 using CaptureIt.App.Overlays;
 using CaptureIt.App.Settings;
 using CaptureIt.App.TrayIcon;
+using System.IO;
 
 namespace CaptureIt.App.Core;
 
@@ -148,6 +149,11 @@ public sealed class CaptureController
                     $"Your configured save folder was unavailable ({result.FallbackReason}). " +
                     $"Saved to {result.SavedFilePath} instead.");
             }
+
+            if (settings.OcrEnabled)
+            {
+                RunOcrAndSave(bitmap, result.SavedFilePath);
+            }
         }
         catch (Exception ex)
         {
@@ -168,6 +174,30 @@ public sealed class CaptureController
         }
         _settingsService.Save(settings);
     }
+
+    /// <summary>
+    /// Runs OCR on the just-saved bitmap and writes the recognized text next to the
+    /// image, reusing its base file name with a .txt extension. OCR failures (e.g. no
+    /// language pack installed) are reported but don't affect the already-successful
+    /// image save.
+    /// </summary>
+    private void RunOcrAndSave(System.Drawing.Bitmap bitmap, string savedImagePath)
+    {
+        try
+        {
+            var text = OcrService.ExtractText(bitmap);
+            if (text is not null)
+            {
+                var textFilePath = Path.ChangeExtension(savedImagePath, ".txt");
+                File.WriteAllText(textFilePath, text);
+            }
+        }
+        catch (Exception ex)
+        {
+            _trayIconManager.ShowFailureNotification("OCR failed", ex.Message);
+        }
+    }
+
 
     /// <summary>
     /// When a capture delay is configured, shows the countdown overlay (giving the

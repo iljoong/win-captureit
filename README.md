@@ -22,8 +22,15 @@ A Windows-only screenshot capture tool (.NET 10, WPF) that runs in the system tr
   pattern (default `Screenshot_{datetime}.png`), with automatic collision suffixing
   (`_001`, `_002`, ...) and automatic fallback to `%Pictures%\CaptureIt` if the
   configured folder becomes unavailable.
+- Optional **OCR text extraction** (disabled by default, toggled in Settings): runs
+  Windows' built-in OCR (`Windows.Media.Ocr`) on every captured screenshot and saves
+  the recognized text next to the image, using the same base filename with a `.txt`
+  extension (e.g. `Screenshot_20260705_101500.png` + `Screenshot_20260705_101500.txt`).
+  Requires an OCR language pack for one of the user's Windows profile languages; if
+  none is installed, or no text is found, no `.txt` file is written and the image save
+  itself is unaffected.
 - Silent on successful captures; shows a Windows notification only on failures
-  (e.g. hotkey conflicts, save-folder problems).
+  (e.g. hotkey conflicts, save-folder problems, OCR errors).
 - Settings persisted as JSON at `%AppData%\CaptureIt\settings.json`.
 
 See `docs` in the session history / `plan.md` used during design for the full set of
@@ -35,11 +42,11 @@ design decisions and the rubber-duck design review that shaped this implementati
 ```
 CaptureIt.slnx
 src/
-  CaptureIt.App/     # WPF tray app (net10.0-windows)
+  CaptureIt.App/     # WPF tray app (net10.0-windows10.0.19041.0)
     Models/           # AppSettings, MonitorInfo, CaptureMode, HotkeyDefinition
     Settings/         # SettingsService (JSON persistence) + Settings window
     Hotkeys/          # RegisterHotKey-based global hotkey manager
-    Capture/          # GDI-based virtual desktop capture, monitor enumeration, save pipeline
+    Capture/          # GDI-based virtual desktop capture, monitor enumeration, save pipeline, OCR (Windows.Media.Ocr)
     Overlays/          # Region-select overlay, monitor-picker overlay
     TrayIcon/          # Tray icon + context menu, Explorer-restart resilience
     Core/              # CaptureController orchestration
@@ -54,7 +61,8 @@ Requires the .NET 10 SDK.
 dotnet build
 ```
 
-This project targets `net10.0-windows` (WPF + WinForms) and sets
+This project targets `net10.0-windows10.0.19041.0` (WPF + WinForms, plus the Windows
+10 2004 WinRT API surface needed for `Windows.Media.Ocr`) and sets
 `EnableWindowsTargeting=true` so it can be **restored and compiled** on non-Windows
 machines for CI/editing purposes. However, since it uses WPF, WinForms, and Win32
 interop (RegisterHotKey, BitBlt, monitor enumeration, etc.), **the app can only be run,

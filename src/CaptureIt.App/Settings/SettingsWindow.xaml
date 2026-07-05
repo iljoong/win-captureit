@@ -12,6 +12,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -52,11 +53,20 @@
             </StackPanel>
         </GroupBox>
 
+        <!-- OCR -->
+        <GroupBox Grid.Row="4" Header="Text extraction (OCR)" Margin="0,0,0,12">
+            <StackPanel Margin="8">
+                <CheckBox x:Name="OcrEnabledCheckBox" Content="Extract text from captured screenshots" />
+                <TextBlock Margin="0,6,0,0" FontSize="11" Foreground="Gray" TextWrapping="Wrap"
+                           Text="When enabled, each screenshot is scanned for text (using Windows' built-in OCR), and the extracted text is saved next to the image with the same file name and a .txt extension. Disabled by default." />
+            </StackPanel>
+        </GroupBox>
+
         <!-- Notes -->
-        <TextBlock Grid.Row="4" TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,0,0,12"
+        <TextBlock Grid.Row="5" TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,0,0,12"
                    Text="Note: CaptureIt does not start automatically with Windows. Screenshots are saved as PNG only. If the save folder becomes unavailable, captures automatically fall back to the Pictures\CaptureIt folder." />
 
-        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">
+        <StackPanel Grid.Row="7" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="Cancel" Width="90" Margin="0,0,8,0" Click="OnCancelClick" />
             <Button Content="Save" Width="90" Click="OnSaveClick" IsDefault="True" />
         </StackPanel>
