@@ -140,19 +140,29 @@ public sealed class CaptureController
 
         try
         {
-            var result = ImageSaveService.Save(bitmap, settings);
-
-            if (result.UsedFallbackFolder)
+            if (settings.SaveToClipboard)
             {
-                _trayIconManager.ShowFailureNotification(
-                    "Saved to fallback folder",
-                    $"Your configured save folder was unavailable ({result.FallbackReason}). " +
-                    $"Saved to {result.SavedFilePath} instead.");
+                if (!CopyToClipboard(bitmap, settings))
+                {
+                    return; // Nothing was placed on the clipboard; don't update remembered state.
+                }
             }
-
-            if (settings.OcrEnabled)
+            else
             {
-                RunOcrAndSave(bitmap, result.SavedFilePath);
+                var result = ImageSaveService.Save(bitmap, settings);
+
+                if (result.UsedFallbackFolder)
+                {
+                    _trayIconManager.ShowFailureNotification(
+                        "Saved to fallback folder",
+                        $"Your configured save folder was unavailable ({result.FallbackReason}). " +
+                        $"Saved to {result.SavedFilePath} instead.");
+                }
+
+                if (settings.OcrEnabled)
+                {
+                    RunOcrAndSave(bitmap, result.SavedFilePath);
+                }
             }
         }
         catch (Exception ex)
@@ -196,6 +206,33 @@ public sealed class CaptureController
         {
             _trayIconManager.ShowFailureNotification("OCR failed", ex.Message);
         }
+    }
+
+    /// <summary>
+    /// Copies the capture result to the clipboard instead of saving a file. When OCR is
+    /// enabled, the recognized text is copied; otherwise the image is copied. Returns
+    /// false (after notifying the user) when OCR is enabled but no text could be
+    /// recognized, so there is nothing to place on the clipboard.
+    /// </summary>
+    private bool CopyToClipboard(System.Drawing.Bitmap bitmap, Models.AppSettings settings)
+    {
+        if (settings.OcrEnabled)
+        {
+            var text = OcrService.ExtractText(bitmap);
+            if (string.IsNullOrEmpty(text))
+            {
+                _trayIconManager.ShowFailureNotification(
+                    "No text to copy",
+                    "OCR did not find any text in the capture, so nothing was copied to the clipboard.");
+                return false;
+            }
+
+            ClipboardService.SetText(text);
+            return true;
+        }
+
+        ClipboardService.SetImage(bitmap);
+        return true;
     }
 
 

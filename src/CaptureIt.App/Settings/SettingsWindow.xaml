@@ -44,21 +44,15 @@
             </StackPanel>
         </GroupBox>
 
-        <!-- Capture delay -->
-        <GroupBox Grid.Row="3" Header="Capture delay" Margin="0,0,0,12">
+        <!-- Options -->
+        <GroupBox Grid.Row="3" Grid.RowSpan="2" Header="Options" Margin="0,0,0,12">
             <StackPanel Margin="8">
-                <ComboBox x:Name="CaptureDelayComboBox" Width="140" HorizontalAlignment="Left" />
-                <TextBlock Margin="0,6,0,0" FontSize="11" Foreground="Gray" TextWrapping="Wrap"
-                           Text="When you start a capture, a countdown runs first so you can prepare the screen (open a menu, hover a tooltip). The desktop is frozen the moment the countdown ends, and then you select the region or monitor." />
-            </StackPanel>
-        </GroupBox>
-
-        <!-- OCR -->
-        <GroupBox Grid.Row="4" Header="Text extraction (OCR)" Margin="0,0,0,12">
-            <StackPanel Margin="8">
-                <CheckBox x:Name="OcrEnabledCheckBox" Content="Extract text from captured screenshots" />
-                <TextBlock Margin="0,6,0,0" FontSize="11" Foreground="Gray" TextWrapping="Wrap"
-                           Text="When enabled, each screenshot is scanned for text (using Windows' built-in OCR), and the extracted text is saved next to the image with the same file name and a .txt extension. Disabled by default." />
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Capture delay:" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <ComboBox x:Name="CaptureDelayComboBox" Width="140" HorizontalAlignment="Left" />
+                </StackPanel>
+                <CheckBox x:Name="OcrEnabledCheckBox" Content="Extract text from captured screenshots" Margin="0,10,0,0" />
+                <CheckBox x:Name="SaveToClipboardCheckBox" Content="Save to clipboard" Margin="0,10,0,0" />
             </StackPanel>
         </GroupBox>
 
