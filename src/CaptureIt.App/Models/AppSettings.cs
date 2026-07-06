@@ -63,6 +63,13 @@ public sealed class AppSettings
     /// </summary>
     public bool SaveToClipboard { get; set; }
 
+    /// <summary>
+    /// Settings for the "AI capture" feature group (OpenAI-compatible Markdown
+    /// extraction / question answering). The API key is stored separately in
+    /// Windows Credential Manager, not here.
+    /// </summary>
+    public AiCaptureSettings AiCapture { get; set; } = new();
+
     /// <summary>The delay values the UI offers and the only ones treated as valid. 0 = Off.</summary>
     public static readonly IReadOnlyList<int> SupportedCaptureDelays = new[] { 0, 3, 5, 10 };
 

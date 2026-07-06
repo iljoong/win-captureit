@@ -1,0 +1,36 @@
+<Window x:Class="CaptureIt.App.Overlays.AiAnswerOverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        Topmost="True"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        Width="760" Height="520">
+    <Border CornerRadius="12" Padding="20" Background="#EE1E1E1E">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Text="AI answer" FontSize="18" FontWeight="Bold"
+                       Foreground="White" Margin="0,0,0,12" />
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <TextBlock x:Name="AnswerText"
+                           Text="Thinking…"
+                           TextWrapping="Wrap"
+                           FontSize="15"
+                           Foreground="#EEEEEE" />
+            </ScrollViewer>
+
+            <TextBlock Grid.Row="2" Text="Press Enter or Esc to close"
+                       Foreground="#AAAAAA" FontSize="11"
+                       HorizontalAlignment="Center" Margin="0,12,0,0" />
+        </Grid>
+    </Border>
+</Window>

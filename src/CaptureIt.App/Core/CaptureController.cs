@@ -69,7 +69,17 @@ public sealed class CaptureController
             }
 
             using var cropped = ScreenCaptureService.CropRegion(frozenDesktop, virtualDesktopBounds, selectedRegion);
-            SaveAndRemember(cropped, CaptureMode.Region, lastRegion: selectedRegion);
+
+            var settings = _settingsService.Load();
+            if (settings.AiCapture.Mode == AiCaptureMode.Answer)
+            {
+                RunAiAnswerFlow(cropped, settings);
+                RememberCaptureState(CaptureMode.Region, lastRegion: selectedRegion);
+            }
+            else
+            {
+                SaveAndRemember(cropped, CaptureMode.Region, lastRegion: selectedRegion);
+            }
         }
         catch (Exception ex)
         {
@@ -121,7 +131,17 @@ public sealed class CaptureController
             }
 
             using var cropped = ScreenCaptureService.CropMonitor(frozenDesktop, virtualDesktopBounds, chosenMonitor);
-            SaveAndRemember(cropped, CaptureMode.FullScreen, lastMonitorDeviceName: chosenMonitor.DeviceName);
+
+            var settings = _settingsService.Load();
+            if (settings.AiCapture.Mode == AiCaptureMode.Answer)
+            {
+                RunAiAnswerFlow(cropped, settings);
+                RememberCaptureState(CaptureMode.FullScreen, lastMonitorDeviceName: chosenMonitor.DeviceName);
+            }
+            else
+            {
+                SaveAndRemember(cropped, CaptureMode.FullScreen, lastMonitorDeviceName: chosenMonitor.DeviceName);
+            }
         }
         catch (Exception ex)
         {
@@ -130,6 +150,24 @@ public sealed class CaptureController
         finally
         {
             EndCapture();
+        }
+    }
+
+    /// <summary>
+    /// Shows the AI-generated answer overlay for "Use AI to answer" mode. Unlike the
+    /// normal pipeline, nothing is saved or copied to the clipboard — the capture is
+    /// only used as context for the AI call, and the result is shown on screen until
+    /// the user dismisses it (Enter/Esc).
+    /// </summary>
+    private void RunAiAnswerFlow(System.Drawing.Bitmap bitmap, AppSettings settings)
+    {
+        try
+        {
+            AiAnswerOverlayWindow.ShowAnswer(bitmap, settings);
+        }
+        catch (Exception ex)
+        {
+            _trayIconManager.ShowFailureNotification("AI capture failed", ex.Message);
         }
     }
 
@@ -159,7 +197,11 @@ public sealed class CaptureController
                         $"Saved to {result.SavedFilePath} instead.");
                 }
 
-                if (settings.OcrEnabled)
+                if (settings.AiCapture.Mode == AiCaptureMode.Capture)
+                {
+                    RunAiCaptureAndSave(bitmap, result.SavedFilePath, settings);
+                }
+                else if (settings.OcrEnabled)
                 {
                     RunOcrAndSave(bitmap, result.SavedFilePath);
                 }
@@ -173,6 +215,13 @@ public sealed class CaptureController
 
         // Only remember these after a successful (or fallback-successful) save, so a
         // failed capture doesn't flip the hotkey's remembered mode/region/monitor.
+        RememberCaptureState(mode, lastRegion, lastMonitorDeviceName, settings);
+    }
+
+    private void RememberCaptureState(CaptureMode mode, System.Drawing.Rectangle? lastRegion = null,
+        string? lastMonitorDeviceName = null, AppSettings? loadedSettings = null)
+    {
+        var settings = loadedSettings ?? _settingsService.Load();
         settings.LastCaptureMode = mode;
         if (lastRegion is { } region)
         {
@@ -183,6 +232,29 @@ public sealed class CaptureController
             settings.LastMonitorDeviceName = lastMonitorDeviceName;
         }
         _settingsService.Save(settings);
+    }
+
+    /// <summary>
+    /// Runs "Use AI capture" Markdown extraction on the just-saved bitmap and writes
+    /// the result next to the image, reusing its base file name with a .md
+    /// extension. Failures (bad API key, network issue, etc.) are reported but don't
+    /// affect the already-successful image save.
+    /// </summary>
+    private void RunAiCaptureAndSave(System.Drawing.Bitmap bitmap, string savedImagePath, AppSettings settings)
+    {
+        try
+        {
+            var markdown = AiCaptureService.ExtractMarkdown(bitmap, settings);
+            if (!string.IsNullOrEmpty(markdown))
+            {
+                var markdownFilePath = Path.ChangeExtension(savedImagePath, ".md");
+                File.WriteAllText(markdownFilePath, markdown);
+            }
+        }
+        catch (Exception ex)
+        {
+            _trayIconManager.ShowFailureNotification("AI capture failed", ex.Message);
+        }
     }
 
     /// <summary>
@@ -209,15 +281,32 @@ public sealed class CaptureController
     }
 
     /// <summary>
-    /// Copies the capture result to the clipboard instead of saving a file. When OCR is
-    /// enabled, the recognized text is copied; otherwise the image is copied. Returns
-    /// false (after notifying the user) when OCR is enabled but no text could be
-    /// recognized, so there is nothing to place on the clipboard.
+    /// Copies the capture result to the clipboard instead of saving a file. When AI
+    /// capture is set to "Use AI capture", the extracted Markdown is copied; else
+    /// when OCR is enabled, the recognized text is copied; otherwise the image is
+    /// copied. Returns false (after notifying the user) when text extraction is
+    /// enabled but nothing could be extracted, so there is nothing to place on the
+    /// clipboard.
     /// </summary>
     private bool CopyToClipboard(System.Drawing.Bitmap bitmap, Models.AppSettings settings)
     {
         try
         {
+            if (settings.AiCapture.Mode == AiCaptureMode.Capture)
+            {
+                var markdown = AiCaptureService.ExtractMarkdown(bitmap, settings);
+                if (string.IsNullOrEmpty(markdown))
+                {
+                    _trayIconManager.ShowFailureNotification(
+                        "No text to copy",
+                        "AI capture did not return any Markdown, so nothing was copied to the clipboard.");
+                    return false;
+                }
+
+                ClipboardService.SetText(markdown);
+                return true;
+            }
+
             if (settings.OcrEnabled)
             {
                 var text = OcrService.ExtractText(bitmap);
