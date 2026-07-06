@@ -216,23 +216,32 @@ public sealed class CaptureController
     /// </summary>
     private bool CopyToClipboard(System.Drawing.Bitmap bitmap, Models.AppSettings settings)
     {
-        if (settings.OcrEnabled)
+        try
         {
-            var text = OcrService.ExtractText(bitmap);
-            if (string.IsNullOrEmpty(text))
+            if (settings.OcrEnabled)
             {
-                _trayIconManager.ShowFailureNotification(
-                    "No text to copy",
-                    "OCR did not find any text in the capture, so nothing was copied to the clipboard.");
-                return false;
+                var text = OcrService.ExtractText(bitmap);
+                if (string.IsNullOrEmpty(text))
+                {
+                    _trayIconManager.ShowFailureNotification(
+                        "No text to copy",
+                        "OCR did not find any text in the capture, so nothing was copied to the clipboard.");
+                    return false;
+                }
+
+                ClipboardService.SetText(text);
+                return true;
             }
 
-            ClipboardService.SetText(text);
+            ClipboardService.SetImage(bitmap);
             return true;
         }
-
-        ClipboardService.SetImage(bitmap);
-        return true;
+        catch (Exception ex)
+        {
+            // Clipboard access can fail transiently (e.g. it's locked by another app).
+            _trayIconManager.ShowFailureNotification("Could not copy to clipboard", ex.Message);
+            return false;
+        }
     }
 
 
