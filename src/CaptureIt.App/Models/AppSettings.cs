@@ -55,6 +55,14 @@ public sealed class AppSettings
     /// </summary>
     public bool OcrEnabled { get; set; }
 
+    /// <summary>
+    /// When enabled, the capture result is placed on the Windows clipboard instead of
+    /// being written to a file. If <see cref="OcrEnabled"/> is also enabled, the OCR
+    /// text is copied to the clipboard; otherwise the captured image is copied.
+    /// Disabled by default.
+    /// </summary>
+    public bool SaveToClipboard { get; set; }
+
     /// <summary>The delay values the UI offers and the only ones treated as valid. 0 = Off.</summary>
     public static readonly IReadOnlyList<int> SupportedCaptureDelays = new[] { 0, 3, 5, 10 };
 

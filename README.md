@@ -29,6 +29,10 @@ A Windows-only screenshot capture tool (.NET 10, WPF) that runs in the system tr
   Requires an OCR language pack for one of the user's Windows profile languages; if
   none is installed, or no text is found, no `.txt` file is written and the image save
   itself is unaffected.
+- Optional **Save to clipboard** (disabled by default, toggled in Settings): when
+  enabled, the capture is placed on the Windows clipboard instead of being written to a
+  file. If OCR is also enabled, the recognized **text** is copied to the clipboard;
+  otherwise the captured **image** is copied.
 - Silent on successful captures; shows a Windows notification only on failures
   (e.g. hotkey conflicts, save-folder problems, OCR errors).
 - Settings persisted as JSON at `%AppData%\CaptureIt\settings.json`.
@@ -89,6 +93,6 @@ coordinate math used to crop regions/monitors out of the frozen desktop bitmap
 ## Known limitations (by design, per requirements)
 
 - No auto-start with Windows — launch manually.
-- No clipboard copy or post-capture toast on success (silent by design).
+- No post-capture toast on success (silent by design).
 - Cannot capture the UAC secure desktop or DRM-protected video content (inherent GDI
   capture limitation).

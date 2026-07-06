@@ -129,4 +129,26 @@ public class SettingsServiceTests : IDisposable
     {
         Assert.Equal(0, new AppSettings().CaptureDelaySeconds);
     }
+
+    [Fact]
+    public void NewSettings_SaveToClipboardDefaultsToFalse()
+    {
+        Assert.False(new AppSettings().SaveToClipboard);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void SaveThenLoad_PreservesSaveToClipboard(bool saveToClipboard)
+    {
+        var service = CreateServiceWithFile();
+        var settings = service.Load();
+        settings.SaveFolder = _tempDir;
+        settings.SaveToClipboard = saveToClipboard;
+
+        service.Save(settings);
+        var reloaded = service.Load();
+
+        Assert.Equal(saveToClipboard, reloaded.SaveToClipboard);
+    }
 }
