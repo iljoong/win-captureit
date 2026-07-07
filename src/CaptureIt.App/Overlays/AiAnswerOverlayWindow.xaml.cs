@@ -1,7 +1,9 @@
 using System.Drawing;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Threading;
 using CaptureIt.App.Capture;
 using CaptureIt.App.Models;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
@@ -16,9 +18,18 @@ namespace CaptureIt.App.Overlays;
 /// </summary>
 public partial class AiAnswerOverlayWindow : Window
 {
+    private const int WM_DPICHANGED = 0x02E0;
+
     private readonly Bitmap _bitmap;
     private readonly AppSettings _settings;
     private readonly System.Drawing.Rectangle _targetBounds;
+
+    // The overlay's intended size in device-independent (WPF) units, captured from
+    // XAML before the window is shown. Used to compute the centered position; WPF
+    // itself owns the actual (DPI-scaled) window size, so these never change even as
+    // the window moves between monitors of differing DPI.
+    private readonly double _intendedWidthDip;
+    private readonly double _intendedHeightDip;
 
     private AiAnswerOverlayWindow(Bitmap bitmap, AppSettings settings, System.Drawing.Rectangle targetBounds)
     {
@@ -27,6 +38,8 @@ public partial class AiAnswerOverlayWindow : Window
         _bitmap = bitmap;
         _settings = settings;
         _targetBounds = targetBounds;
+        _intendedWidthDip = Width;
+        _intendedHeightDip = Height;
 
         SourceInitialized += OnSourceInitialized;
         Loaded += OnLoaded;
@@ -39,7 +52,12 @@ public partial class AiAnswerOverlayWindow : Window
         // rather than always on the primary screen, using physical pixels so it
         // lands correctly regardless of per-monitor DPI scaling.
         var hwnd = new WindowInteropHelper(this).Handle;
-        ApplyCenteredBounds(hwnd);
+
+        // Watch for WM_DPICHANGED so we can re-assert our centered position after WPF's
+        // built-in per-monitor-DPI handling reacts (see ApplyCenteredPosition / WndProc).
+        HwndSource.FromHwnd(hwnd)?.AddHook(WndProc);
+
+        ApplyCenteredPosition(hwnd);
 
         // Same reasoning as the other overlays: this is triggered from a background
         // tray app, so it needs to force itself to the foreground to receive
@@ -51,30 +69,48 @@ public partial class AiAnswerOverlayWindow : Window
     }
 
     /// <summary>
-    /// Computes and applies the centered window rect for <see cref="_targetBounds"/>.
-    /// Split out so it can be re-applied in <see cref="OnLoaded"/>: when the window
-    /// declares a fixed DIP size (as this one does), moving it cross-monitor via
-    /// <see cref="NativeWindowPositioning.SetWindowBoundsPhysicalPixels"/> triggers
-    /// WM_DPICHANGED, and WPF's built-in per-monitor-DPI handling reacts by
-    /// resizing/repositioning the window itself (anchored to the window's *previous*
-    /// top-left, not our centered target) whenever the destination monitor's DPI
-    /// differs from the one the window was created on. That silently undoes our
-    /// centering — reliably reproducible when centering on any monitor other than
-    /// the one the window happened to be created on. Re-running this after the
-    /// window has settled (in Loaded) corrects any such drift.
+    /// Re-centers the overlay over <see cref="_targetBounds"/> by setting only its
+    /// top-left position in physical pixels — never its size. This window has a fixed
+    /// DIP size (760x520) that WPF renders at the correct physical size for whichever
+    /// monitor it currently occupies, so we must let WPF own sizing. Earlier attempts
+    /// that also set the physical *size* desynced WPF's DIP model: moving the window
+    /// onto a monitor with a different DPI fires WM_DPICHANGED, and WPF re-scales the
+    /// window by the DPI ratio — compounding with our manual size and shrinking (or
+    /// growing) the overlay on every transition. By repositioning only, WPF keeps the
+    /// size correct and we just keep it centered. The centered top-left is derived
+    /// from the intended DIP size scaled by the *target* monitor's DPI (via
+    /// <see cref="NativeWindowPositioning.GetCenteredPhysicalBounds"/>), matching the
+    /// physical size WPF will render there. Re-applied after WM_DPICHANGED settles
+    /// (from <see cref="WndProc"/>) and in <see cref="OnLoaded"/> to correct the
+    /// proportional reposition WPF applies during the DPI transition.
     /// </summary>
-    private void ApplyCenteredBounds(IntPtr hwnd)
+    private void ApplyCenteredPosition(IntPtr hwnd)
     {
-        var bounds = NativeWindowPositioning.GetCenteredPhysicalBounds(_targetBounds, Width, Height);
-        NativeWindowPositioning.SetWindowBoundsPhysicalPixels(hwnd, bounds);
+        var bounds = NativeWindowPositioning.GetCenteredPhysicalBounds(
+            _targetBounds, _intendedWidthDip, _intendedHeightDip);
+        NativeWindowPositioning.SetWindowPositionPhysicalPixels(hwnd, bounds.Left, bounds.Top);
+    }
+
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == WM_DPICHANGED)
+        {
+            // Let WPF apply its DPI-driven resize/reposition first, then re-center the
+            // (correctly WPF-sized) window over the target once that has settled.
+            // Repositioning within the same monitor does not fire another
+            // WM_DPICHANGED, so this cannot loop.
+            Dispatcher.BeginInvoke(new Action(() => ApplyCenteredPosition(hwnd)), DispatcherPriority.Loaded);
+        }
+
+        return IntPtr.Zero;
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        // Re-apply centering now that any WM_DPICHANGED-driven adjustment from
-        // SourceInitialized's initial move has already settled (see ApplyCenteredBounds).
+        // Re-center now that any WM_DPICHANGED-driven adjustment from
+        // SourceInitialized's initial move has already settled (see ApplyCenteredPosition).
         var hwnd = new WindowInteropHelper(this).Handle;
-        ApplyCenteredBounds(hwnd);
+        ApplyCenteredPosition(hwnd);
 
         try
         {

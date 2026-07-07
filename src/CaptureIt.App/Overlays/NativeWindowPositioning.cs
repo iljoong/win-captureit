@@ -45,6 +45,7 @@ internal static class NativeWindowPositioning
 
     private const uint SWP_NOZORDER = 0x0004;
     private const uint SWP_SHOWWINDOW = 0x0040;
+    private const uint SWP_NOSIZE = 0x0001;
 
     public static void SetWindowBoundsPhysicalPixels(IntPtr hwnd, Rectangle boundsInPhysicalPixels)
     {
@@ -58,6 +59,20 @@ internal static class NativeWindowPositioning
             boundsInPhysicalPixels.Left, boundsInPhysicalPixels.Top,
             boundsInPhysicalPixels.Width, boundsInPhysicalPixels.Height,
             SWP_NOZORDER | SWP_SHOWWINDOW);
+    }
+
+    /// <summary>
+    /// Moves a window's top-left to the given physical-pixel position without
+    /// changing its size (SWP_NOSIZE). Used for fixed-size WPF windows where WPF
+    /// itself owns the (DPI-scaled) size — we must only reposition, never resize,
+    /// so we don't desync WPF's DIP-based sizing and trigger runaway DPI rescaling.
+    /// </summary>
+    public static void SetWindowPositionPhysicalPixels(IntPtr hwnd, int x, int y)
+    {
+        SetWindowPos(
+            hwnd, IntPtr.Zero,
+            x, y, 0, 0,
+            SWP_NOZORDER | SWP_NOSIZE | SWP_SHOWWINDOW);
     }
 
     /// <summary>
