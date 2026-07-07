@@ -13,70 +13,73 @@
 
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel>
-                <!-- Save folder -->
-                <GroupBox Header="Save folder" Margin="0,0,0,12">
-                    <DockPanel Margin="8">
-                        <Button DockPanel.Dock="Right" Content="Browse..." Width="90" Margin="8,0,0,0" Click="OnBrowseFolderClick" />
-                        <TextBox x:Name="SaveFolderTextBox" VerticalContentAlignment="Center" />
-                    </DockPanel>
-                </GroupBox>
-
-                <!-- Filename pattern -->
-                <GroupBox Header="Filename pattern (.png always appended)" Margin="0,0,0,12">
+                <!-- Save Option -->
+                <GroupBox Header="Save Option" Margin="0,0,0,12">
                     <StackPanel Margin="8">
+                        <TextBlock Text="Save folder:" Margin="0,0,0,2" />
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Content="Browse..." Width="90" Margin="8,0,0,0" Click="OnBrowseFolderClick" />
+                            <TextBox x:Name="SaveFolderTextBox" VerticalContentAlignment="Center" />
+                        </DockPanel>
+
+                        <TextBlock Text="File name pattern (.png always appended):" Margin="0,12,0,2" />
                         <TextBox x:Name="FilenamePatternTextBox" TextChanged="OnFilenamePatternTextChanged" />
                         <TextBlock x:Name="FilenamePreviewText" Margin="0,6,0,0" Foreground="Gray" />
                         <TextBlock Text="Tokens: {date}, {time}, {datetime}" Margin="0,2,0,0" FontSize="11" Foreground="Gray" />
                     </StackPanel>
                 </GroupBox>
 
-                <!-- Hotkey -->
-                <GroupBox Header="Global hotkey (repeats last-used capture mode)" Margin="0,0,0,12">
+                <!-- Capture Options -->
+                <GroupBox Header="Capture Options" Margin="0,0,0,12">
                     <StackPanel Margin="8">
+                        <TextBlock Text="Global hotkey (repeats last-used capture mode):" Margin="0,0,0,2" />
                         <TextBox x:Name="HotkeyTextBox" IsReadOnly="True"
                                  PreviewKeyDown="OnHotkeyPreviewKeyDown"
                                  Text="Click here and press a new key combination" />
                         <TextBlock x:Name="HotkeyValidationText" Margin="0,6,0,0" Foreground="Red" />
-                    </StackPanel>
-                </GroupBox>
 
-                <!-- Options -->
-                <GroupBox Header="Options" Margin="0,0,0,12">
-                    <StackPanel Margin="8">
-                        <StackPanel Orientation="Horizontal">
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
                             <TextBlock Text="Capture delay:" VerticalAlignment="Center" Margin="0,0,8,0" />
                             <ComboBox x:Name="CaptureDelayComboBox" Width="140" HorizontalAlignment="Left" />
                         </StackPanel>
-                        <CheckBox x:Name="OcrEnabledCheckBox" Content="Extract text from captured screenshots" Margin="0,10,0,0" />
-                        <CheckBox x:Name="SaveToClipboardCheckBox" Content="Save to clipboard" Margin="0,10,0,0" />
+
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <TextBlock Text="Saving option:" VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <ComboBox x:Name="SavingOptionComboBox" Width="200" HorizontalAlignment="Left" />
+                        </StackPanel>
                     </StackPanel>
                 </GroupBox>
 
-                <!-- AI capture -->
-                <GroupBox Header="AI capture" Margin="0,0,0,12">
+                <!-- Text Extract Options -->
+                <GroupBox Header="Text Extract Options" Margin="0,0,0,12">
                     <StackPanel Margin="8">
-                        <ComboBox x:Name="AiModeComboBox" Width="220" HorizontalAlignment="Left" />
+                        <CheckBox x:Name="OcrEnabledCheckBox" Content="Extract text from captured screenshots"
+                                  Checked="OnOcrEnabledChanged" Unchecked="OnOcrEnabledChanged" />
 
-                        <TextBlock Text="Base URL:" Margin="0,10,0,2" />
-                        <TextBox x:Name="AiBaseUrlTextBox" />
+                        <StackPanel x:Name="TextExtractOptionsPanel" Margin="0,10,0,0">
+                            <ComboBox x:Name="ExtractMethodComboBox" Width="220" HorizontalAlignment="Left" />
 
-                        <TextBlock Text="Model:" Margin="0,10,0,2" />
-                        <TextBox x:Name="AiModelTextBox" />
+                            <TextBlock Text="Base URL:" Margin="0,10,0,2" />
+                            <TextBox x:Name="AiBaseUrlTextBox" />
 
-                        <TextBlock Text="API Key:" Margin="0,10,0,2" />
-                        <PasswordBox x:Name="AiApiKeyBox" />
-                        <TextBlock x:Name="AiApiKeyHintText" Margin="0,2,0,0" FontSize="11" Foreground="Gray" />
+                            <TextBlock Text="Model:" Margin="0,10,0,2" />
+                            <TextBox x:Name="AiModelTextBox" />
 
-                        <TextBlock Text="Prompt (used by &quot;Use AI to answer&quot;):" Margin="0,10,0,2" />
-                        <TextBox x:Name="AiPromptTextBox" Height="72" AcceptsReturn="True" TextWrapping="Wrap"
-                                 VerticalScrollBarVisibility="Auto" />
+                            <TextBlock Text="API Key:" Margin="0,10,0,2" />
+                            <PasswordBox x:Name="AiApiKeyBox" />
+                            <TextBlock x:Name="AiApiKeyHintText" Margin="0,2,0,0" FontSize="11" Foreground="Gray" />
 
-                        <DockPanel Margin="0,12,0,4">
-                            <Button DockPanel.Dock="Right" x:Name="McpAddButton" Content="&#xE710;"
-                                    FontFamily="Segoe MDL2 Assets" Width="28" ToolTip="Add MCP server" Click="OnMcpAddClick" />
-                            <TextBlock Text="MCP servers (tools for &quot;Use AI to answer&quot;):" VerticalAlignment="Center" />
-                        </DockPanel>
-                        <StackPanel x:Name="McpServersPanel" />
+                            <TextBlock Text="Prompt (used by &quot;Use AI to answer&quot;):" Margin="0,10,0,2" />
+                            <TextBox x:Name="AiPromptTextBox" Height="72" AcceptsReturn="True" TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto" />
+
+                            <DockPanel Margin="0,12,0,4">
+                                <Button DockPanel.Dock="Right" x:Name="McpAddButton" Content="&#xE710;"
+                                        FontFamily="Segoe MDL2 Assets" Width="28" ToolTip="Add MCP server" Click="OnMcpAddClick" />
+                                <TextBlock Text="MCP servers (tools for &quot;Use AI to answer&quot;):" VerticalAlignment="Center" />
+                            </DockPanel>
+                            <StackPanel x:Name="McpServersPanel" />
+                        </StackPanel>
                     </StackPanel>
                 </GroupBox>
 

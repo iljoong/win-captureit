@@ -131,24 +131,26 @@ public class SettingsServiceTests : IDisposable
     }
 
     [Fact]
-    public void NewSettings_SaveToClipboardDefaultsToFalse()
+    public void NewSettings_SavingDefaultsToSaveToFile()
     {
-        Assert.False(new AppSettings().SaveToClipboard);
+        Assert.Equal(SavingOption.SaveToFile, new AppSettings().Saving);
     }
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void SaveThenLoad_PreservesSaveToClipboard(bool saveToClipboard)
+    [InlineData(SavingOption.SaveToFile)]
+    [InlineData(SavingOption.SaveToClipboard)]
+    [InlineData(SavingOption.SaveToFileAndClipboard)]
+    [InlineData(SavingOption.Off)]
+    public void SaveThenLoad_PreservesSavingOption(SavingOption saving)
     {
         var service = CreateServiceWithFile();
         var settings = service.Load();
         settings.SaveFolder = _tempDir;
-        settings.SaveToClipboard = saveToClipboard;
+        settings.Saving = saving;
 
         service.Save(settings);
         var reloaded = service.Load();
 
-        Assert.Equal(saveToClipboard, reloaded.SaveToClipboard);
+        Assert.Equal(saving, reloaded.Saving);
     }
 }

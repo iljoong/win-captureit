@@ -1,12 +1,13 @@
 namespace CaptureIt.App.Models;
 
 /// <summary>
-/// The three AI Capture modes, selectable in the "AI capture" settings group.
+/// The text-extraction engine, selectable in the "Text Extract Options" settings
+/// group (only relevant when "Extract text from captured screenshots" is enabled).
 /// </summary>
 public enum AiCaptureMode
 {
-    /// <summary>AI processing is disabled; captures behave exactly as before (optionally with plain OCR).</summary>
-    Off,
+    /// <summary>Uses the built-in Windows OCR engine to extract plain text from the capture.</summary>
+    WindowsOcr,
 
     /// <summary>Uses the configured OpenAI-compatible endpoint to extract the capture's content as formatted Markdown.</summary>
     Capture,
