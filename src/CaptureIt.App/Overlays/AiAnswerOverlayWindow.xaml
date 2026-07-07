@@ -6,7 +6,6 @@
         Background="Transparent"
         ShowInTaskbar="False"
         Topmost="True"
-        WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         Width="760" Height="520">
     <Border CornerRadius="12" Padding="20" Background="#EE1E1E1E">

@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Runtime.InteropServices;
+using CaptureIt.App.Capture;
 
 namespace CaptureIt.App.Overlays;
 
@@ -14,6 +15,15 @@ internal static class NativeWindowPositioning
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter,
         int x, int y, int cx, int cy, uint uFlags);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromRect(ref NativeMethods.RECT lprc, uint dwFlags);
+
+    [DllImport("shcore.dll")]
+    private static extern int GetDpiForMonitor(IntPtr hmonitor, int dpiType, out uint dpiX, out uint dpiY);
+
+    private const uint MONITOR_DEFAULTTONEAREST = 2;
+    private const int MDT_EFFECTIVE_DPI = 0;
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
@@ -48,6 +58,45 @@ internal static class NativeWindowPositioning
             boundsInPhysicalPixels.Left, boundsInPhysicalPixels.Top,
             boundsInPhysicalPixels.Width, boundsInPhysicalPixels.Height,
             SWP_NOZORDER | SWP_SHOWWINDOW);
+    }
+
+    /// <summary>
+    /// Computes a window rectangle, in physical pixels, sized from the given
+    /// device-independent (WPF) dimensions — scaled by the DPI of the monitor
+    /// nearest <paramref name="targetBoundsPhysicalPixels"/> — and centered within
+    /// that area (e.g. the selected region or the captured monitor). The result is
+    /// clamped so the window never exceeds the target area, keeping it fully
+    /// visible even when centered on a small selected region.
+    /// </summary>
+    public static Rectangle GetCenteredPhysicalBounds(
+        Rectangle targetBoundsPhysicalPixels, double desiredWidthDip, double desiredHeightDip)
+    {
+        double dpiScale = 1.0;
+        var rect = new NativeMethods.RECT
+        {
+            Left = targetBoundsPhysicalPixels.Left,
+            Top = targetBoundsPhysicalPixels.Top,
+            Right = targetBoundsPhysicalPixels.Right,
+            Bottom = targetBoundsPhysicalPixels.Bottom
+        };
+
+        var hMonitor = MonitorFromRect(ref rect, MONITOR_DEFAULTTONEAREST);
+        if (hMonitor != IntPtr.Zero && GetDpiForMonitor(hMonitor, MDT_EFFECTIVE_DPI, out uint dpiX, out _) == 0)
+        {
+            dpiScale = dpiX / 96.0;
+        }
+
+        int width = (int)Math.Round(desiredWidthDip * dpiScale);
+        int height = (int)Math.Round(desiredHeightDip * dpiScale);
+
+        const int margin = 40;
+        width = Math.Min(width, Math.Max(200, targetBoundsPhysicalPixels.Width - margin));
+        height = Math.Min(height, Math.Max(150, targetBoundsPhysicalPixels.Height - margin));
+
+        int x = targetBoundsPhysicalPixels.Left + (targetBoundsPhysicalPixels.Width - width) / 2;
+        int y = targetBoundsPhysicalPixels.Top + (targetBoundsPhysicalPixels.Height - height) / 2;
+
+        return new Rectangle(x, y, width, height);
     }
 
     /// <summary>

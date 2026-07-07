@@ -73,7 +73,7 @@ public sealed class CaptureController
             var settings = _settingsService.Load();
             if (settings.AiCapture.Mode == AiCaptureMode.Answer)
             {
-                RunAiAnswerFlow(cropped, settings);
+                RunAiAnswerFlow(cropped, settings, selectedRegion);
                 RememberCaptureState(CaptureMode.Region, lastRegion: selectedRegion);
             }
             else
@@ -135,7 +135,7 @@ public sealed class CaptureController
             var settings = _settingsService.Load();
             if (settings.AiCapture.Mode == AiCaptureMode.Answer)
             {
-                RunAiAnswerFlow(cropped, settings);
+                RunAiAnswerFlow(cropped, settings, chosenMonitor.Bounds);
                 RememberCaptureState(CaptureMode.FullScreen, lastMonitorDeviceName: chosenMonitor.DeviceName);
             }
             else
@@ -157,13 +157,15 @@ public sealed class CaptureController
     /// Shows the AI-generated answer overlay for "Use AI to answer" mode. Unlike the
     /// normal pipeline, nothing is saved or copied to the clipboard — the capture is
     /// only used as context for the AI call, and the result is shown on screen until
-    /// the user dismisses it (Enter/Esc).
+    /// the user dismisses it (Enter/Esc). <paramref name="bounds"/> is the selected
+    /// region's (or captured monitor's) bounds, so the overlay can center itself over
+    /// that area instead of always the primary screen.
     /// </summary>
-    private void RunAiAnswerFlow(System.Drawing.Bitmap bitmap, AppSettings settings)
+    private void RunAiAnswerFlow(System.Drawing.Bitmap bitmap, AppSettings settings, System.Drawing.Rectangle bounds)
     {
         try
         {
-            AiAnswerOverlayWindow.ShowAnswer(bitmap, settings);
+            AiAnswerOverlayWindow.ShowAnswer(bitmap, settings, bounds);
         }
         catch (Exception ex)
         {
