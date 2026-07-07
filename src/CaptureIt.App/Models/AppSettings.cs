@@ -49,19 +49,21 @@ public sealed class AppSettings
     public int CaptureDelaySeconds { get; set; }
 
     /// <summary>
-    /// When enabled, runs OCR (via Windows.Media.Ocr) on every captured screenshot and
-    /// saves the extracted text alongside the image as a .txt file with the same base
-    /// filename. Disabled by default.
+    /// Master toggle for text extraction. When enabled, the engine selected by
+    /// <see cref="AiCaptureSettings.Mode"/> (Windows OCR, AI capture, or AI answer)
+    /// runs on every captured screenshot; its output is then saved per
+    /// <see cref="Saving"/>. When disabled, no text is extracted and captures are
+    /// stored as images only. Disabled by default.
     /// </summary>
     public bool OcrEnabled { get; set; }
 
     /// <summary>
-    /// When enabled, the capture result is placed on the Windows clipboard instead of
-    /// being written to a file. If <see cref="OcrEnabled"/> is also enabled, the OCR
-    /// text is copied to the clipboard; otherwise the captured image is copied.
-    /// Disabled by default.
+    /// Where capture results are stored (file, clipboard, both, or nowhere). This is
+    /// independent of the text-extraction engine: whatever is produced (image or
+    /// extracted text) is routed according to this option. Defaults to
+    /// <see cref="SavingOption.SaveToFile"/>.
     /// </summary>
-    public bool SaveToClipboard { get; set; }
+    public SavingOption Saving { get; set; } = SavingOption.SaveToFile;
 
     /// <summary>
     /// Settings for the "AI capture" feature group (OpenAI-compatible Markdown

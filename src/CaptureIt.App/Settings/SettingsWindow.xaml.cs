@@ -41,9 +41,10 @@ public partial class SettingsWindow : Window
         FilenamePatternTextBox.Text = _workingCopy.FilenamePattern;
         HotkeyTextBox.Text = _pendingHotkey.ToString();
         OcrEnabledCheckBox.IsChecked = _workingCopy.OcrEnabled;
-        SaveToClipboardCheckBox.IsChecked = _workingCopy.SaveToClipboard;
         PopulateCaptureDelayChoices();
+        PopulateSavingOptionChoices();
         PopulateAiCaptureSection();
+        UpdateTextExtractOptionsEnabled();
         UpdateFilenamePreview();
     }
 
@@ -65,7 +66,42 @@ public partial class SettingsWindow : Window
 
     private sealed record DelayChoice(string Label, int Seconds);
 
+    /// <summary>
+    /// Surfaces the saving option as a fixed set of choices (save to file, clipboard,
+    /// both, or off), replacing the earlier "Save to clipboard" checkbox.
+    /// </summary>
+    private void PopulateSavingOptionChoices()
+    {
+        SavingOptionComboBox.ItemsSource = new List<SavingChoice>
+        {
+            new("Save to file", SavingOption.SaveToFile),
+            new("Save to clipboard", SavingOption.SaveToClipboard),
+            new("Save to file and clipboard", SavingOption.SaveToFileAndClipboard),
+            new("Off", SavingOption.Off),
+        };
+        SavingOptionComboBox.DisplayMemberPath = nameof(SavingChoice.Label);
+        SavingOptionComboBox.SelectedValuePath = nameof(SavingChoice.Option);
+        SavingOptionComboBox.SelectedValue = _workingCopy.Saving;
+    }
+
+    private sealed record SavingChoice(string Label, SavingOption Option);
+
     private sealed record AiModeChoice(string Label, AiCaptureMode Mode);
+
+    private void OnOcrEnabledChanged(object sender, RoutedEventArgs e) => UpdateTextExtractOptionsEnabled();
+
+    /// <summary>
+    /// Enables the extraction-method dropdown and all AI fields only while "Extract
+    /// text from captured screenshots" is checked; otherwise the whole sub-panel is
+    /// greyed out (the master checkbox itself stays enabled).
+    /// </summary>
+    private void UpdateTextExtractOptionsEnabled()
+    {
+        if (TextExtractOptionsPanel is not null)
+        {
+            TextExtractOptionsPanel.IsEnabled = OcrEnabledCheckBox.IsChecked == true;
+        }
+    }
 
     /// <summary>
     /// Populates the AI capture mode dropdown, text fields, and MCP server rows from
@@ -74,15 +110,15 @@ public partial class SettingsWindow : Window
     /// </summary>
     private void PopulateAiCaptureSection()
     {
-        AiModeComboBox.ItemsSource = new List<AiModeChoice>
+        ExtractMethodComboBox.ItemsSource = new List<AiModeChoice>
         {
-            new("Off", AiCaptureMode.Off),
-            new("Use AI capture", AiCaptureMode.Capture),
+            new("use Windows OCR", AiCaptureMode.WindowsOcr),
+            new("Use AI to capture", AiCaptureMode.Capture),
             new("Use AI to answer", AiCaptureMode.Answer),
         };
-        AiModeComboBox.DisplayMemberPath = nameof(AiModeChoice.Label);
-        AiModeComboBox.SelectedValuePath = nameof(AiModeChoice.Mode);
-        AiModeComboBox.SelectedValue = _workingCopy.AiCapture.Mode;
+        ExtractMethodComboBox.DisplayMemberPath = nameof(AiModeChoice.Label);
+        ExtractMethodComboBox.SelectedValuePath = nameof(AiModeChoice.Mode);
+        ExtractMethodComboBox.SelectedValue = _workingCopy.AiCapture.Mode;
 
         AiBaseUrlTextBox.Text = _workingCopy.AiCapture.BaseUrl;
         AiModelTextBox.Text = _workingCopy.AiCapture.Model;
@@ -242,9 +278,9 @@ public partial class SettingsWindow : Window
         _workingCopy.CaptureDelaySeconds = AppSettings.NormalizeCaptureDelay(
             CaptureDelayComboBox.SelectedValue is int seconds ? seconds : 0);
         _workingCopy.OcrEnabled = OcrEnabledCheckBox.IsChecked == true;
-        _workingCopy.SaveToClipboard = SaveToClipboardCheckBox.IsChecked == true;
+        _workingCopy.Saving = SavingOptionComboBox.SelectedValue is SavingOption saving ? saving : SavingOption.SaveToFile;
 
-        _workingCopy.AiCapture.Mode = AiModeComboBox.SelectedValue is AiCaptureMode mode ? mode : AiCaptureMode.Off;
+        _workingCopy.AiCapture.Mode = ExtractMethodComboBox.SelectedValue is AiCaptureMode mode ? mode : AiCaptureMode.WindowsOcr;
         _workingCopy.AiCapture.BaseUrl = string.IsNullOrWhiteSpace(AiBaseUrlTextBox.Text)
             ? AiCaptureSettings.DefaultBaseUrl
             : AiBaseUrlTextBox.Text.Trim();

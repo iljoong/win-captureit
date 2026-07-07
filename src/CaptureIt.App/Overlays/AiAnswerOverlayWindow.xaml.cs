@@ -34,6 +34,13 @@ public partial class AiAnswerOverlayWindow : Window
     private readonly double _intendedWidthDip;
     private readonly double _intendedHeightDip;
 
+    /// <summary>
+    /// The answer produced by the AI call, captured so the caller can also save it
+    /// (per the saving option) after the overlay is dismissed. Null if the call failed
+    /// or the overlay was closed before the answer arrived.
+    /// </summary>
+    public string? AnswerResult { get; private set; }
+
     private AiAnswerOverlayWindow(Bitmap bitmap, AppSettings settings, SettingsService settingsService,
         System.Drawing.Rectangle targetBounds)
     {
@@ -158,6 +165,7 @@ public partial class AiAnswerOverlayWindow : Window
         try
         {
             var answer = await AiCaptureService.AnswerAsync(_bitmap, _settings);
+            AnswerResult = answer;
             AnswerText.Text = string.IsNullOrWhiteSpace(answer) ? "(No answer returned.)" : answer;
         }
         catch (Exception ex)
@@ -179,12 +187,15 @@ public partial class AiAnswerOverlayWindow : Window
     /// Shows the overlay and blocks (pumping the message loop, like the other
     /// overlays) until the user dismisses it with Enter or Esc. <paramref name="targetBounds"/>
     /// is the selected region's (or captured monitor's) bounds in physical pixels,
-    /// used to center the overlay over the relevant area of the screen.
+    /// used to center the overlay over the relevant area of the screen. Returns the
+    /// AI answer text (or null if it failed / was dismissed early) so the caller can
+    /// save it alongside the extracted text.
     /// </summary>
-    public static void ShowAnswer(Bitmap bitmap, AppSettings settings, SettingsService settingsService,
+    public static string? ShowAnswer(Bitmap bitmap, AppSettings settings, SettingsService settingsService,
         System.Drawing.Rectangle targetBounds)
     {
         var overlay = new AiAnswerOverlayWindow(bitmap, settings, settingsService, targetBounds);
         overlay.ShowDialog();
+        return overlay.AnswerResult;
     }
 }
