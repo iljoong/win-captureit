@@ -33,6 +33,17 @@ A Windows-only screenshot capture tool (.NET 10, WPF) that runs in the system tr
   enabled, the capture is placed on the Windows clipboard instead of being written to a
   file. If OCR is also enabled, the recognized **text** is copied to the clipboard;
   otherwise the captured **image** is copied.
+- Optional **AI capture** (disabled by default, configured in Settings): connect an
+  OpenAI-compatible endpoint (Base URL, model, and API key — the key is stored securely
+  in Windows Credential Manager, never in `settings.json`). Two modes:
+  - **Use AI capture** — extracts the captured content as formatted **Markdown**.
+  - **Use AI to answer** — answers your configured **Prompt** using the capture as
+    context and shows the result in an always-on-top **answer overlay** (dismiss with
+    **Enter** or **Esc**) instead of saving a file. The overlay is centered over the
+    captured region/monitor and has an **Opacity slider** (bottom-left) to make it more
+    or less see-through; the chosen value is remembered in `settings.json` (it is not
+    exposed in the Settings window). Optional **MCP tool servers** can be supplied for
+    this mode.
 - Silent on successful captures; shows a Windows notification only on failures
   (e.g. hotkey conflicts, save-folder problems, OCR errors).
 - Settings persisted as JSON at `%AppData%\CaptureIt\settings.json`.
@@ -50,8 +61,8 @@ src/
     Models/           # AppSettings, MonitorInfo, CaptureMode, HotkeyDefinition
     Settings/         # SettingsService (JSON persistence) + Settings window
     Hotkeys/          # RegisterHotKey-based global hotkey manager
-    Capture/          # GDI-based virtual desktop capture, monitor enumeration, save pipeline, OCR (Windows.Media.Ocr)
-    Overlays/          # Region-select overlay, monitor-picker overlay
+    Capture/          # GDI-based virtual desktop capture, monitor enumeration, save pipeline, OCR (Windows.Media.Ocr), AI capture (OpenAI-compatible), credential storage
+    Overlays/          # Region-select overlay, monitor-picker overlay, AI answer overlay (with opacity slider)
     TrayIcon/          # Tray icon + context menu, Explorer-restart resilience
     Core/              # CaptureController orchestration
   CaptureIt.Tests/    # xUnit tests for pure logic (filename rules, settings I/O, crop math)

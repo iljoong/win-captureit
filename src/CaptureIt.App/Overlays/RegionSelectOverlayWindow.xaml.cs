@@ -9,6 +9,7 @@ using System.Windows.Shapes;
 using CaptureIt.App.Capture;
 using Point = System.Windows.Point;
 using Rectangle = System.Drawing.Rectangle;
+using Size = System.Windows.Size;
 
 namespace CaptureIt.App.Overlays;
 
@@ -78,7 +79,7 @@ public partial class RegionSelectOverlayWindow : Window
     /// <summary>
     /// Draws the given virtual-desktop region as the current selection and records it
     /// so Enter captures it without any drag. Inverse of <see cref="UpdateSelectionVisual"/>'s
-    /// DIP-&gt;physical mapping.
+    /// image-to-virtual-desktop mapping.
     /// </summary>
     private void ShowInitialRegion(Rectangle regionInVirtualDesktopCoords)
     {
@@ -88,15 +89,9 @@ public partial class RegionSelectOverlayWindow : Window
             return; // Remembered region no longer fits the current desktop layout.
         }
 
-        var transform = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformFromDevice
-                         ?? System.Windows.Media.Matrix.Identity;
-
-        var topLeftDip = transform.Transform(new Point(
-            clamped.Left - _virtualDesktopBounds.Left,
-            clamped.Top - _virtualDesktopBounds.Top));
-        var bottomRightDip = transform.Transform(new Point(
-            clamped.Right - _virtualDesktopBounds.Left,
-            clamped.Bottom - _virtualDesktopBounds.Top));
+        var imageSize = GetFrozenDesktopImageSize();
+        var topLeftDip = VirtualDesktopToImagePoint(clamped.Left, clamped.Top, imageSize);
+        var bottomRightDip = VirtualDesktopToImagePoint(clamped.Right, clamped.Bottom, imageSize);
 
         Canvas.SetLeft(SelectionRectangle, topLeftDip.X);
         Canvas.SetTop(SelectionRectangle, topLeftDip.Y);
@@ -178,23 +173,40 @@ public partial class RegionSelectOverlayWindow : Window
         SelectionRectangle.Width = w;
         SelectionRectangle.Height = h;
 
-        // WPF hands us mouse positions in this window's device-independent units
-        // (DIPs). Under Per-Monitor DPI Aware V2 (set in app.manifest), WPF keeps
-        // each window's CompositionTarget DPI matrix in sync with whichever monitor
-        // it's currently on, so converting through TransformToDevice here yields the
-        // correct physical-pixel offset for *this* monitor's scale factor, even on
-        // mixed-DPI setups. We then add the window's own top-left (which was set in
-        // physical pixels via SetWindowPos) to get absolute virtual-desktop coordinates.
-        var transform = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformToDevice
-                         ?? System.Windows.Media.Matrix.Identity;
-        var topLeftDevice = transform.Transform(new Point(x, y));
-        var bottomRightDevice = transform.Transform(new Point(x + w, y + h));
+        var imageSize = GetFrozenDesktopImageSize();
+        var topLeft = ImagePointToVirtualDesktop(x, y, imageSize);
+        var bottomRight = ImagePointToVirtualDesktop(x + w, y + h, imageSize);
 
-        _selectedRegion = new Rectangle(
-            _virtualDesktopBounds.Left + (int)Math.Round(topLeftDevice.X),
-            _virtualDesktopBounds.Top + (int)Math.Round(topLeftDevice.Y),
-            (int)Math.Round(bottomRightDevice.X - topLeftDevice.X),
-            (int)Math.Round(bottomRightDevice.Y - topLeftDevice.Y));
+        _selectedRegion = Rectangle.FromLTRB(topLeft.X, topLeft.Y, bottomRight.X, bottomRight.Y);
+    }
+
+    private Size GetFrozenDesktopImageSize()
+    {
+        var width = FrozenDesktopImage.ActualWidth > 0 ? FrozenDesktopImage.ActualWidth : ActualWidth;
+        var height = FrozenDesktopImage.ActualHeight > 0 ? FrozenDesktopImage.ActualHeight : ActualHeight;
+
+        if (width <= 0 || height <= 0)
+        {
+            return new Size(_virtualDesktopBounds.Width, _virtualDesktopBounds.Height);
+        }
+
+        return new Size(width, height);
+    }
+
+    private Point VirtualDesktopToImagePoint(int virtualX, int virtualY, Size imageSize)
+    {
+        var x = (virtualX - _virtualDesktopBounds.Left) * imageSize.Width / _virtualDesktopBounds.Width;
+        var y = (virtualY - _virtualDesktopBounds.Top) * imageSize.Height / _virtualDesktopBounds.Height;
+        return new Point(x, y);
+    }
+
+    private System.Drawing.Point ImagePointToVirtualDesktop(double imageX, double imageY, Size imageSize)
+    {
+        var clampedX = Math.Clamp(imageX, 0, imageSize.Width);
+        var clampedY = Math.Clamp(imageY, 0, imageSize.Height);
+        var virtualX = _virtualDesktopBounds.Left + (int)Math.Round(clampedX * _virtualDesktopBounds.Width / imageSize.Width);
+        var virtualY = _virtualDesktopBounds.Top + (int)Math.Round(clampedY * _virtualDesktopBounds.Height / imageSize.Height);
+        return new System.Drawing.Point(virtualX, virtualY);
     }
 
     private static BitmapSource ToBitmapSource(Bitmap bitmap)

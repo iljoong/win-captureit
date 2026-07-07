@@ -1,17 +1,22 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using CaptureIt.App.Capture;
 using CaptureIt.App.Hotkeys;
 using CaptureIt.App.Models;
+using Button = System.Windows.Controls.Button;
+using CheckBox = System.Windows.Controls.CheckBox;
+using TextBox = System.Windows.Controls.TextBox;
 using WinFormsFolderBrowserDialog = System.Windows.Forms.FolderBrowserDialog;
 
 namespace CaptureIt.App.Settings;
 
 /// <summary>
-/// Settings window: save folder, filename pattern (with live preview), and global
-/// hotkey remapping. Hotkey changes are test-registered before saving so we never
-/// silently accept a combination Windows or another app already owns.
+/// Settings window: save folder, filename pattern (with live preview), global
+/// hotkey remapping, and AI capture configuration. Hotkey changes are
+/// test-registered before saving so we never silently accept a combination
+/// Windows or another app already owns.
 /// </summary>
 public partial class SettingsWindow : Window
 {
@@ -19,6 +24,9 @@ public partial class SettingsWindow : Window
     private readonly HotkeyManager _hotkeyManager;
     private AppSettings _workingCopy;
     private HotkeyDefinition _pendingHotkey;
+
+    /// <summary>Live UI rows for configured MCP servers, kept in sync with <see cref="McpServersPanel"/>.</summary>
+    private readonly List<(CheckBox Enabled, TextBox Command)> _mcpRows = new();
 
     public SettingsWindow(SettingsService settingsService, HotkeyManager hotkeyManager)
     {
@@ -35,8 +43,10 @@ public partial class SettingsWindow : Window
         OcrEnabledCheckBox.IsChecked = _workingCopy.OcrEnabled;
         SaveToClipboardCheckBox.IsChecked = _workingCopy.SaveToClipboard;
         PopulateCaptureDelayChoices();
+        PopulateAiCaptureSection();
         UpdateFilenamePreview();
     }
+
 
     /// <summary>
     /// Surfaces the capture delay as a fixed set of choices (Off, 3s, 5s, 10s) rather
@@ -54,6 +64,87 @@ public partial class SettingsWindow : Window
     }
 
     private sealed record DelayChoice(string Label, int Seconds);
+
+    private sealed record AiModeChoice(string Label, AiCaptureMode Mode);
+
+    /// <summary>
+    /// Populates the AI capture mode dropdown, text fields, and MCP server rows from
+    /// the working copy. The API key itself is never loaded into the UI (it lives in
+    /// Windows Credential Manager) — only a hint about whether one is already saved.
+    /// </summary>
+    private void PopulateAiCaptureSection()
+    {
+        AiModeComboBox.ItemsSource = new List<AiModeChoice>
+        {
+            new("Off", AiCaptureMode.Off),
+            new("Use AI capture", AiCaptureMode.Capture),
+            new("Use AI to answer", AiCaptureMode.Answer),
+        };
+        AiModeComboBox.DisplayMemberPath = nameof(AiModeChoice.Label);
+        AiModeComboBox.SelectedValuePath = nameof(AiModeChoice.Mode);
+        AiModeComboBox.SelectedValue = _workingCopy.AiCapture.Mode;
+
+        AiBaseUrlTextBox.Text = _workingCopy.AiCapture.BaseUrl;
+        AiModelTextBox.Text = _workingCopy.AiCapture.Model;
+        AiPromptTextBox.Text = _workingCopy.AiCapture.Prompt;
+
+        AiApiKeyHintText.Text = CredentialManagerService.HasApiKey()
+            ? "An API key is already saved. Leave blank to keep it, or enter a new value to replace it."
+            : "No API key saved yet.";
+
+        McpServersPanel.Children.Clear();
+        _mcpRows.Clear();
+        foreach (var server in _workingCopy.AiCapture.McpServers)
+        {
+            AddMcpRow(server.Enabled, server.Command);
+        }
+    }
+
+    private void OnMcpAddClick(object sender, RoutedEventArgs e) => AddMcpRow(enabled: true, command: string.Empty);
+
+    /// <summary>Adds one [checkbox] [command text field] [remove] row to the MCP servers list.</summary>
+    private void AddMcpRow(bool enabled, string command)
+    {
+        var row = new DockPanel { Margin = new Thickness(0, 4, 0, 0) };
+
+        var removeButton = new Button
+        {
+            Content = "\u2715",
+            Width = 24,
+            Margin = new Thickness(6, 0, 0, 0),
+            ToolTip = "Remove this MCP server"
+        };
+        DockPanel.SetDock(removeButton, Dock.Right);
+
+        var enabledCheckBox = new CheckBox
+        {
+            IsChecked = enabled,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 6, 0)
+        };
+        DockPanel.SetDock(enabledCheckBox, Dock.Left);
+
+        var commandTextBox = new TextBox
+        {
+            Text = command,
+            VerticalContentAlignment = VerticalAlignment.Center,
+            ToolTip = "Full command line to launch the MCP server over stdio, " +
+                      "e.g. npx -y @modelcontextprotocol/server-everything"
+        };
+
+        row.Children.Add(enabledCheckBox);
+        row.Children.Add(removeButton);
+        row.Children.Add(commandTextBox);
+
+        removeButton.Click += (_, _) =>
+        {
+            McpServersPanel.Children.Remove(row);
+            _mcpRows.RemoveAll(r => ReferenceEquals(r.Command, commandTextBox));
+        };
+
+        McpServersPanel.Children.Add(row);
+        _mcpRows.Add((enabledCheckBox, commandTextBox));
+    }
 
     private void OnBrowseFolderClick(object sender, RoutedEventArgs e)
     {
@@ -152,6 +243,36 @@ public partial class SettingsWindow : Window
             CaptureDelayComboBox.SelectedValue is int seconds ? seconds : 0);
         _workingCopy.OcrEnabled = OcrEnabledCheckBox.IsChecked == true;
         _workingCopy.SaveToClipboard = SaveToClipboardCheckBox.IsChecked == true;
+
+        _workingCopy.AiCapture.Mode = AiModeComboBox.SelectedValue is AiCaptureMode mode ? mode : AiCaptureMode.Off;
+        _workingCopy.AiCapture.BaseUrl = string.IsNullOrWhiteSpace(AiBaseUrlTextBox.Text)
+            ? AiCaptureSettings.DefaultBaseUrl
+            : AiBaseUrlTextBox.Text.Trim();
+        _workingCopy.AiCapture.Model = string.IsNullOrWhiteSpace(AiModelTextBox.Text)
+            ? AiCaptureSettings.DefaultModel
+            : AiModelTextBox.Text.Trim();
+        _workingCopy.AiCapture.Prompt = AiPromptTextBox.Text;
+        _workingCopy.AiCapture.McpServers = _mcpRows
+            .Where(row => !string.IsNullOrWhiteSpace(row.Command.Text))
+            .Select(row => new McpServerEntry { Enabled = row.Enabled.IsChecked == true, Command = row.Command.Text.Trim() })
+            .ToList();
+
+        // Only touch Credential Manager if the user actually typed a new key; an
+        // empty box means "keep whatever is already saved" rather than "clear it".
+        if (!string.IsNullOrEmpty(AiApiKeyBox.Password))
+        {
+            try
+            {
+                CredentialManagerService.SaveApiKey(AiApiKeyBox.Password);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show(this,
+                    $"The API key could not be saved to Windows Credential Manager: {ex.Message}",
+                    "CaptureIt", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+        }
 
         _settingsService.Save(_workingCopy);
 

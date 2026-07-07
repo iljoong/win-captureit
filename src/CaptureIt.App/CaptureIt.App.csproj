@@ -32,4 +32,14 @@
     <Resource Include="Assets\capture.ico" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- AI capture feature: OpenAI-compatible chat client, Microsoft.Extensions.AI
+         abstractions, and the MCP client for optional tool-calling in "Use AI to
+         answer" mode. -->
+    <PackageReference Include="OpenAI" Version="2.12.0" />
+    <PackageReference Include="ModelContextProtocol.Core" Version="1.4.0" />
+    <PackageReference Include="Microsoft.Extensions.AI" Version="10.7.0" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.7.0" />
+  </ItemGroup>
+
 </Project>
