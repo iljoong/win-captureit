@@ -6,6 +6,7 @@ using System.Windows.Interop;
 using System.Windows.Threading;
 using CaptureIt.App.Capture;
 using CaptureIt.App.Models;
+using CaptureIt.App.Settings;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 
 namespace CaptureIt.App.Overlays;
@@ -22,7 +23,9 @@ public partial class AiAnswerOverlayWindow : Window
 
     private readonly Bitmap _bitmap;
     private readonly AppSettings _settings;
+    private readonly SettingsService _settingsService;
     private readonly System.Drawing.Rectangle _targetBounds;
+    private double _lastSavedOpacity;
 
     // The overlay's intended size in device-independent (WPF) units, captured from
     // XAML before the window is shown. Used to compute the centered position; WPF
@@ -31,19 +34,59 @@ public partial class AiAnswerOverlayWindow : Window
     private readonly double _intendedWidthDip;
     private readonly double _intendedHeightDip;
 
-    private AiAnswerOverlayWindow(Bitmap bitmap, AppSettings settings, System.Drawing.Rectangle targetBounds)
+    private AiAnswerOverlayWindow(Bitmap bitmap, AppSettings settings, SettingsService settingsService,
+        System.Drawing.Rectangle targetBounds)
     {
         InitializeComponent();
 
         _bitmap = bitmap;
         _settings = settings;
+        _settingsService = settingsService;
         _targetBounds = targetBounds;
         _intendedWidthDip = Width;
         _intendedHeightDip = Height;
 
+        // Restore the remembered overlay opacity; setting the slider value drives
+        // OnOpacityChanged, which applies it to the panel background brush.
+        _lastSavedOpacity = AppSettings.NormalizeAiAnswerOverlayOpacity(settings.AiAnswerOverlayOpacity);
+        OpacitySlider.Value = _lastSavedOpacity;
+        PanelBackgroundBrush.Opacity = _lastSavedOpacity;
+
         SourceInitialized += OnSourceInitialized;
         Loaded += OnLoaded;
         KeyDown += OnKeyDown;
+        Closed += OnClosed;
+    }
+
+    private void OnOpacityChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        // Fires once during XAML parse (before fields are assigned); ignore until ready.
+        if (_settings is null || PanelBackgroundBrush is null)
+        {
+            return;
+        }
+
+        PanelBackgroundBrush.Opacity = e.NewValue;
+        _settings.AiAnswerOverlayOpacity = e.NewValue;
+    }
+
+    private void OnClosed(object? sender, EventArgs e)
+    {
+        // Persist the chosen opacity once, on close, so we don't hammer the disk on
+        // every slider tick. This value is intentionally not shown in the settings UI.
+        if (Math.Abs(_settings.AiAnswerOverlayOpacity - _lastSavedOpacity) < 0.0001)
+        {
+            return;
+        }
+
+        try
+        {
+            _settingsService.Save(_settings);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to persist overlay opacity: {ex.Message}");
+        }
     }
 
     private void OnSourceInitialized(object? sender, EventArgs e)
@@ -138,9 +181,10 @@ public partial class AiAnswerOverlayWindow : Window
     /// is the selected region's (or captured monitor's) bounds in physical pixels,
     /// used to center the overlay over the relevant area of the screen.
     /// </summary>
-    public static void ShowAnswer(Bitmap bitmap, AppSettings settings, System.Drawing.Rectangle targetBounds)
+    public static void ShowAnswer(Bitmap bitmap, AppSettings settings, SettingsService settingsService,
+        System.Drawing.Rectangle targetBounds)
     {
-        var overlay = new AiAnswerOverlayWindow(bitmap, settings, targetBounds);
+        var overlay = new AiAnswerOverlayWindow(bitmap, settings, settingsService, targetBounds);
         overlay.ShowDialog();
     }
 }

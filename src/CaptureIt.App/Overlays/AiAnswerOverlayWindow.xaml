@@ -8,7 +8,10 @@
         Topmost="True"
         ResizeMode="NoResize"
         Width="760" Height="520">
-    <Border CornerRadius="12" Padding="20" Background="#EE1E1E1E">
+    <Border CornerRadius="12" Padding="20">
+        <Border.Background>
+            <SolidColorBrush x:Name="PanelBackgroundBrush" Color="#1E1E1E" Opacity="0.93" />
+        </Border.Background>
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -27,9 +30,20 @@
                            Foreground="#EEEEEE" />
             </ScrollViewer>
 
-            <TextBlock Grid.Row="2" Text="Press Enter or Esc to close"
-                       Foreground="#AAAAAA" FontSize="11"
-                       HorizontalAlignment="Center" Margin="0,12,0,0" />
+            <Grid Grid.Row="2" Margin="0,12,0,0">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                    <TextBlock Text="Opacity" Foreground="#AAAAAA" FontSize="11"
+                               VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <Slider x:Name="OpacitySlider" Width="120" VerticalAlignment="Center"
+                            Minimum="0.2" Maximum="1.0"
+                            SmallChange="0.05" LargeChange="0.1"
+                            IsSnapToTickEnabled="True" TickFrequency="0.05"
+                            ValueChanged="OnOpacityChanged" />
+                </StackPanel>
+                <TextBlock Text="Press Enter or Esc to close"
+                           Foreground="#AAAAAA" FontSize="11"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Grid>
         </Grid>
     </Border>
 </Window>

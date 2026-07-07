@@ -64,6 +64,7 @@ public sealed class SettingsService
             }
             settings.Hotkey ??= HotkeyDefinition.Default;
             settings.CaptureDelaySeconds = AppSettings.NormalizeCaptureDelay(settings.CaptureDelaySeconds);
+            settings.AiAnswerOverlayOpacity = AppSettings.NormalizeAiAnswerOverlayOpacity(settings.AiAnswerOverlayOpacity);
 
             settings.AiCapture ??= new AiCaptureSettings();
             if (string.IsNullOrWhiteSpace(settings.AiCapture.BaseUrl))

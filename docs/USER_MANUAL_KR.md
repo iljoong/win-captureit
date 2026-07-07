@@ -31,7 +31,7 @@ CaptureIt는 Windows 시스템 트레이에서 동작하는 가벼운 화면 캡
 |------|------|
 | **Capture Region** | 영역을 드래그해서 선택한 부분만 캡처 |
 | **Capture Full Screen** | 전체 화면 캡처 (모니터 여러 대면 선택) |
-| **Settings** | 저장 폴더 · 파일 이름 · 단축키 설정 |
+| **Settings** | 저장 폴더 · 파일 이름 · 단축키 · AI 캡처 설정 |
 | **Exit** | 앱 종료 |
 
 캡처가 **성공하면 아무 알림도 표시하지 않고 조용히** 파일만 저장됩니다.
@@ -139,6 +139,32 @@ CaptureIt는 Windows 시스템 트레이에서 동작하는 가벼운 화면 캡
 - OCR이 켜져 있으나 이미지에서 텍스트를 찾지 못하면 클립보드에 아무것도 복사되지
   않으며, 알림이 표시됩니다.
 
+### AI 캡처 (AI capture)
+- 캡처한 이미지를 OpenAI 호환 엔드포인트로 보내 처리하는 기능이며, **기본값은
+  꺼짐(Off)** 입니다. **AI capture** 그룹에서 설정합니다.
+- 다음 항목을 입력합니다.
+  - **모드(Mode)**: `Off`, `Use AI capture`, `Use AI to answer` 중 선택
+  - **Base URL**: OpenAI 호환 엔드포인트 주소 (예: `https://api.openai.com/v1`)
+  - **Model**: 사용할 모델 이름 (예: `gpt-4o-mini`)
+  - **API Key**: 인증 키. 키는 `settings.json`이 아니라 **Windows 자격 증명 관리자
+    (Credential Manager)** 에 안전하게 저장됩니다.
+  - **Prompt**: `Use AI to answer` 모드에서 사용할 질문/지시문
+  - **MCP servers**: `Use AI to answer` 모드에서 모델이 사용할 수 있는 도구(선택 사항)
+- **모드 설명**
+  - **Use AI capture**: 캡처 내용을 서식이 있는 **Markdown 텍스트**로 추출합니다.
+  - **Use AI to answer**: 캡처를 근거(context)로 **Prompt**에 답하고, 결과를 파일로
+    저장하는 대신 **AI 답변 오버레이**로 보여줍니다.
+
+### AI 답변 오버레이 (AI answer overlay)
+- `Use AI to answer` 모드에서 캡처하면, 캡처한 영역/모니터 위에 답변 오버레이가
+  **항상 위에(Always on top)** 표시됩니다.
+- **Enter** 또는 **Esc** 키를 누르면 오버레이가 닫힙니다.
+- 오버레이 왼쪽 아래의 **Opacity(투명도) 슬라이더**로 배경의 투명도를 조절할 수
+  있습니다. 슬라이더를 클릭한 뒤 **방향키**로 미세하게 조절할 수도 있습니다.
+- 조절한 투명도 값은 `settings.json`에 자동으로 저장되어 다음에 열 때 그대로
+  적용됩니다. 이 값은 **설정 창에는 표시되지 않으며**, 오버레이의 슬라이더로만
+  변경할 수 있습니다.
+
 설정은 `%AppData%\CaptureIt\settings.json` 에 JSON 형식으로 저장됩니다.
 
 ---
@@ -165,3 +191,7 @@ CaptureIt는 Windows 시스템 트레이에서 동작하는 가벼운 화면 캡
 - OCR 텍스트 추출 기능은 기본적으로 꺼져 있으며, Settings에서 켜야 사용됩니다.
   켜져 있어도 OCR 언어 팩이 없거나 텍스트가 없는 이미지는 `.txt` 파일이 생성되지
   않습니다.
+- AI 캡처 기능도 기본적으로 꺼져 있으며, Settings에서 엔드포인트·모델·API 키를
+  설정해야 사용됩니다. API 키는 `settings.json`이 아니라 Windows 자격 증명 관리자에
+  저장됩니다. `Use AI to answer` 모드의 답변 오버레이 투명도는 오버레이의 슬라이더로만
+  조절하며, 그 값은 `settings.json`에 저장되지만 설정 창에는 표시되지 않습니다.

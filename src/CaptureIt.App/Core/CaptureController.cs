@@ -165,7 +165,7 @@ public sealed class CaptureController
     {
         try
         {
-            AiAnswerOverlayWindow.ShowAnswer(bitmap, settings, bounds);
+            AiAnswerOverlayWindow.ShowAnswer(bitmap, settings, _settingsService, bounds);
         }
         catch (Exception ex)
         {

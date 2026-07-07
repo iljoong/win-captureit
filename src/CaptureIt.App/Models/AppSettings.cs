@@ -70,6 +70,22 @@ public sealed class AppSettings
     /// </summary>
     public AiCaptureSettings AiCapture { get; set; } = new();
 
+    /// <summary>
+    /// Opacity (0.2–1.0) of the AI answer overlay's background panel. Adjusted live
+    /// via a slider on the overlay itself and remembered here; deliberately NOT
+    /// surfaced in the settings window. Defaults to 0.93 (the original #EE alpha).
+    /// Clamped to <see cref="MinAiAnswerOverlayOpacity"/>–1.0 on load so the overlay
+    /// can never become fully invisible.
+    /// </summary>
+    public double AiAnswerOverlayOpacity { get; set; } = DefaultAiAnswerOverlayOpacity;
+
+    public const double DefaultAiAnswerOverlayOpacity = 0.93;
+    public const double MinAiAnswerOverlayOpacity = 0.2;
+
+    /// <summary>Clamps an arbitrary (possibly hand-edited) overlay opacity into the supported range.</summary>
+    public static double NormalizeAiAnswerOverlayOpacity(double value) =>
+        double.IsNaN(value) ? DefaultAiAnswerOverlayOpacity : Math.Clamp(value, MinAiAnswerOverlayOpacity, 1.0);
+
     /// <summary>The delay values the UI offers and the only ones treated as valid. 0 = Off.</summary>
     public static readonly IReadOnlyList<int> SupportedCaptureDelays = new[] { 0, 3, 5, 10 };
 
