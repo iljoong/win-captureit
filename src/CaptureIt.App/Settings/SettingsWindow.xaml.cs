@@ -25,8 +25,11 @@ public partial class SettingsWindow : Window
     private AppSettings _workingCopy;
     private HotkeyDefinition _pendingHotkey;
 
-    /// <summary>Live UI rows for configured MCP servers, kept in sync with <see cref="McpServersPanel"/>.</summary>
-    private readonly List<(CheckBox Enabled, TextBox Url)> _mcpRows = new();
+    /// <summary>
+    /// Working list of AI Task templates, kept in sync with <see cref="AiTaskComboBox"/>.
+    /// Cloned from settings on load so Cancel discards any add/edit/delete.
+    /// </summary>
+    private List<AiTaskTemplate> _aiTasks = new();
 
     public SettingsWindow(SettingsService settingsService, HotkeyManager hotkeyManager)
     {
@@ -122,64 +125,111 @@ public partial class SettingsWindow : Window
 
         AiBaseUrlTextBox.Text = _workingCopy.AiCapture.BaseUrl;
         AiModelTextBox.Text = _workingCopy.AiCapture.Model;
-        AiPromptTextBox.Text = _workingCopy.AiCapture.Prompt;
 
         AiApiKeyHintText.Text = CredentialManagerService.HasApiKey()
             ? "An API key is already saved. Leave blank to keep it, or enter a new value to replace it."
             : "No API key saved yet.";
 
-        McpServersPanel.Children.Clear();
-        _mcpRows.Clear();
-        foreach (var server in _workingCopy.AiCapture.McpServers)
+        // Deep-clone so Cancel doesn't leave partial add/edit/delete changes behind in
+        // the loaded settings object.
+        _aiTasks = _workingCopy.AiCapture.AiTasks.Select(CloneAiTask).ToList();
+        var selectedTask = _aiTasks.FirstOrDefault(t =>
+            string.Equals(t.Name, _workingCopy.AiCapture.SelectedAiTaskName, StringComparison.OrdinalIgnoreCase));
+        RefreshAiTaskComboBox(selectedTask ?? _aiTasks.FirstOrDefault());
+    }
+
+    private static AiTaskTemplate CloneAiTask(AiTaskTemplate task) => new()
+    {
+        Name = task.Name,
+        Prompt = task.Prompt,
+        UseWebSearch = task.UseWebSearch,
+        McpServers = task.McpServers.Select(s => new McpServerEntry { Enabled = s.Enabled, Url = s.Url }).ToList(),
+    };
+
+    /// <summary>Rebinds <see cref="AiTaskComboBox"/> to the current <see cref="_aiTasks"/> list and selects <paramref name="select"/> (or the first item).</summary>
+    private void RefreshAiTaskComboBox(AiTaskTemplate? select)
+    {
+        AiTaskComboBox.ItemsSource = null;
+        AiTaskComboBox.ItemsSource = _aiTasks;
+        AiTaskComboBox.DisplayMemberPath = nameof(AiTaskTemplate.Name);
+        AiTaskComboBox.SelectedItem = select is not null && _aiTasks.Contains(select)
+            ? select
+            : _aiTasks.FirstOrDefault();
+
+        UpdateAiTaskPromptText();
+        UpdateAiTaskButtonsEnabled();
+    }
+
+    private void OnAiTaskSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        UpdateAiTaskPromptText();
+        UpdateAiTaskButtonsEnabled();
+    }
+
+    private void UpdateAiTaskPromptText()
+        => AiTaskPromptTextBox.Text = (AiTaskComboBox.SelectedItem as AiTaskTemplate)?.Prompt ?? string.Empty;
+
+    /// <summary>Edit/delete only make sense when the list has at least one selected template.</summary>
+    private void UpdateAiTaskButtonsEnabled()
+    {
+        bool hasSelection = AiTaskComboBox.SelectedItem is AiTaskTemplate;
+        AiTaskEditButton.IsEnabled = hasSelection;
+        AiTaskDeleteButton.IsEnabled = hasSelection;
+    }
+
+    private void OnAiTaskAddClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new AiTaskDialog(template: null, otherTaskNames: _aiTasks.Select(t => t.Name).ToList()) { Owner = this };
+        if (dialog.ShowDialog() == true)
         {
-            AddMcpRow(server.Enabled, server.Url);
+            _aiTasks.Add(dialog.Result);
+            RefreshAiTaskComboBox(dialog.Result);
         }
     }
 
-    private void OnMcpAddClick(object sender, RoutedEventArgs e) => AddMcpRow(enabled: true, url: string.Empty);
-
-    /// <summary>Adds one [checkbox] [url text field] [remove] row to the MCP servers list.</summary>
-    private void AddMcpRow(bool enabled, string url)
+    private void OnAiTaskEditClick(object sender, RoutedEventArgs e)
     {
-        var row = new DockPanel { Margin = new Thickness(0, 4, 0, 0) };
-
-        var removeButton = new Button
+        if (AiTaskComboBox.SelectedItem is not AiTaskTemplate selected)
         {
-            Content = "\u2715",
-            Width = 24,
-            Margin = new Thickness(6, 0, 0, 0),
-            ToolTip = "Remove this MCP server"
-        };
-        DockPanel.SetDock(removeButton, Dock.Right);
+            return;
+        }
 
-        var enabledCheckBox = new CheckBox
+        var otherNames = _aiTasks.Where(t => !ReferenceEquals(t, selected)).Select(t => t.Name).ToList();
+        var dialog = new AiTaskDialog(selected, otherNames) { Owner = this };
+        if (dialog.ShowDialog() == true)
         {
-            IsChecked = enabled,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 0, 6, 0)
-        };
-        DockPanel.SetDock(enabledCheckBox, Dock.Left);
+            var index = _aiTasks.IndexOf(selected);
+            _aiTasks[index] = dialog.Result;
+            RefreshAiTaskComboBox(dialog.Result);
+        }
+    }
 
-        var urlTextBox = new TextBox
+    private void OnAiTaskDeleteClick(object sender, RoutedEventArgs e)
+    {
+        if (AiTaskComboBox.SelectedItem is not AiTaskTemplate selected)
         {
-            Text = url,
-            VerticalContentAlignment = VerticalAlignment.Center,
-            ToolTip = "HTTP(S) endpoint URL of the remote MCP server, " +
-                      "e.g. https://example.com/mcp"
-        };
+            return;
+        }
 
-        row.Children.Add(enabledCheckBox);
-        row.Children.Add(removeButton);
-        row.Children.Add(urlTextBox);
+        _aiTasks.Remove(selected);
+        RefreshAiTaskComboBox(_aiTasks.FirstOrDefault());
+    }
 
-        removeButton.Click += (_, _) =>
+    /// <summary>Adds back any of the built-in AI Task templates whose name isn't already present.</summary>
+    private void OnAiTaskRestoreDefaultsClick(object sender, RoutedEventArgs e)
+    {
+        var existingNames = new HashSet<string>(_aiTasks.Select(t => t.Name), StringComparer.OrdinalIgnoreCase);
+        var added = AiCaptureSettings.CreateDefaultAiTasks()
+            .Where(t => !existingNames.Contains(t.Name))
+            .ToList();
+
+        if (added.Count == 0)
         {
-            McpServersPanel.Children.Remove(row);
-            _mcpRows.RemoveAll(r => ReferenceEquals(r.Url, urlTextBox));
-        };
+            return;
+        }
 
-        McpServersPanel.Children.Add(row);
-        _mcpRows.Add((enabledCheckBox, urlTextBox));
+        _aiTasks.AddRange(added);
+        RefreshAiTaskComboBox(added[0]);
     }
 
     private void OnBrowseFolderClick(object sender, RoutedEventArgs e)
@@ -287,11 +337,8 @@ public partial class SettingsWindow : Window
         _workingCopy.AiCapture.Model = string.IsNullOrWhiteSpace(AiModelTextBox.Text)
             ? AiCaptureSettings.DefaultModel
             : AiModelTextBox.Text.Trim();
-        _workingCopy.AiCapture.Prompt = AiPromptTextBox.Text;
-        _workingCopy.AiCapture.McpServers = _mcpRows
-            .Where(row => !string.IsNullOrWhiteSpace(row.Url.Text))
-            .Select(row => new McpServerEntry { Enabled = row.Enabled.IsChecked == true, Url = row.Url.Text.Trim() })
-            .ToList();
+        _workingCopy.AiCapture.AiTasks = _aiTasks;
+        _workingCopy.AiCapture.SelectedAiTaskName = (AiTaskComboBox.SelectedItem as AiTaskTemplate)?.Name;
 
         // Only touch Credential Manager if the user actually typed a new key; an
         // empty box means "keep whatever is already saved" rather than "clear it".
