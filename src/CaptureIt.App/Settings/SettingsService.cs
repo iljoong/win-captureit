@@ -75,7 +75,7 @@ public sealed class SettingsService
             {
                 settings.AiCapture.Model = AiCaptureSettings.DefaultModel;
             }
-            settings.AiCapture.McpServers ??= new List<McpServerEntry>();
+            settings.AiCapture.AiTasks ??= new List<AiTaskTemplate>();
 
             return settings;
         }
