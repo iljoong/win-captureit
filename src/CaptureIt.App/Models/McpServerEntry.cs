@@ -1,13 +1,15 @@
 namespace CaptureIt.App.Models;
 
 /// <summary>
-/// One configured MCP (Model Context Protocol) server the "Use AI to answer" mode
-/// may connect to for tool-calling. <see cref="Command"/> is a full command line
-/// (e.g. <c>npx -y @modelcontextprotocol/server-everything</c>) run over stdio.
+/// One configured remote MCP (Model Context Protocol) server the "Use AI to answer"
+/// mode may connect to for tool-calling. <see cref="Url"/> is the HTTP(S) endpoint of
+/// a remote server (e.g. <c>https://example.com/mcp</c>); only remote servers are
+/// supported — no local processes are launched.
 /// </summary>
 public sealed class McpServerEntry
 {
     public bool Enabled { get; set; }
 
-    public string Command { get; set; } = string.Empty;
+    /// <summary>HTTP(S) endpoint URL of the remote MCP server.</summary>
+    public string Url { get; set; } = string.Empty;
 }
