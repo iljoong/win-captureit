@@ -161,7 +161,10 @@ public sealed class CaptureController
 
         try
         {
-            SaveCapture(bitmap, settings, aiAnswer);
+            // Run the (potentially slow) save/extraction on a background STA thread
+            // while a "Saving…" spinner gives the user feedback, so they aren't left
+            // wondering during a long OCR/AI save.
+            SavingProgressOverlayWindow.RunWhileSaving(() => SaveCapture(bitmap, settings, aiAnswer));
         }
         catch (Exception ex)
         {

@@ -26,7 +26,7 @@ public partial class SettingsWindow : Window
     private HotkeyDefinition _pendingHotkey;
 
     /// <summary>Live UI rows for configured MCP servers, kept in sync with <see cref="McpServersPanel"/>.</summary>
-    private readonly List<(CheckBox Enabled, TextBox Command)> _mcpRows = new();
+    private readonly List<(CheckBox Enabled, TextBox Url)> _mcpRows = new();
 
     public SettingsWindow(SettingsService settingsService, HotkeyManager hotkeyManager)
     {
@@ -132,14 +132,14 @@ public partial class SettingsWindow : Window
         _mcpRows.Clear();
         foreach (var server in _workingCopy.AiCapture.McpServers)
         {
-            AddMcpRow(server.Enabled, server.Command);
+            AddMcpRow(server.Enabled, server.Url);
         }
     }
 
-    private void OnMcpAddClick(object sender, RoutedEventArgs e) => AddMcpRow(enabled: true, command: string.Empty);
+    private void OnMcpAddClick(object sender, RoutedEventArgs e) => AddMcpRow(enabled: true, url: string.Empty);
 
-    /// <summary>Adds one [checkbox] [command text field] [remove] row to the MCP servers list.</summary>
-    private void AddMcpRow(bool enabled, string command)
+    /// <summary>Adds one [checkbox] [url text field] [remove] row to the MCP servers list.</summary>
+    private void AddMcpRow(bool enabled, string url)
     {
         var row = new DockPanel { Margin = new Thickness(0, 4, 0, 0) };
 
@@ -160,26 +160,26 @@ public partial class SettingsWindow : Window
         };
         DockPanel.SetDock(enabledCheckBox, Dock.Left);
 
-        var commandTextBox = new TextBox
+        var urlTextBox = new TextBox
         {
-            Text = command,
+            Text = url,
             VerticalContentAlignment = VerticalAlignment.Center,
-            ToolTip = "Full command line to launch the MCP server over stdio, " +
-                      "e.g. npx -y @modelcontextprotocol/server-everything"
+            ToolTip = "HTTP(S) endpoint URL of the remote MCP server, " +
+                      "e.g. https://example.com/mcp"
         };
 
         row.Children.Add(enabledCheckBox);
         row.Children.Add(removeButton);
-        row.Children.Add(commandTextBox);
+        row.Children.Add(urlTextBox);
 
         removeButton.Click += (_, _) =>
         {
             McpServersPanel.Children.Remove(row);
-            _mcpRows.RemoveAll(r => ReferenceEquals(r.Command, commandTextBox));
+            _mcpRows.RemoveAll(r => ReferenceEquals(r.Url, urlTextBox));
         };
 
         McpServersPanel.Children.Add(row);
-        _mcpRows.Add((enabledCheckBox, commandTextBox));
+        _mcpRows.Add((enabledCheckBox, urlTextBox));
     }
 
     private void OnBrowseFolderClick(object sender, RoutedEventArgs e)
@@ -289,8 +289,8 @@ public partial class SettingsWindow : Window
             : AiModelTextBox.Text.Trim();
         _workingCopy.AiCapture.Prompt = AiPromptTextBox.Text;
         _workingCopy.AiCapture.McpServers = _mcpRows
-            .Where(row => !string.IsNullOrWhiteSpace(row.Command.Text))
-            .Select(row => new McpServerEntry { Enabled = row.Enabled.IsChecked == true, Command = row.Command.Text.Trim() })
+            .Where(row => !string.IsNullOrWhiteSpace(row.Url.Text))
+            .Select(row => new McpServerEntry { Enabled = row.Enabled.IsChecked == true, Url = row.Url.Text.Trim() })
             .ToList();
 
         // Only touch Credential Manager if the user actually typed a new key; an

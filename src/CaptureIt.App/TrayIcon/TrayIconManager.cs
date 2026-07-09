@@ -81,6 +81,15 @@ public sealed class TrayIconManager : IDisposable
     /// <summary>Shows a Windows notification balloon. Used only for failure cases per the app's UX spec (silent on success).</summary>
     public void ShowFailureNotification(string title, string message)
     {
+        // Saving/extraction runs on a background thread, but NotifyIcon has UI-thread
+        // affinity, so marshal the balloon back to the UI thread when needed.
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher is not null && !dispatcher.CheckAccess())
+        {
+            dispatcher.Invoke(() => ShowFailureNotification(title, message));
+            return;
+        }
+
         _notifyIcon.BalloonTipIcon = ToolTipIcon.Warning;
         _notifyIcon.BalloonTipTitle = title;
         _notifyIcon.BalloonTipText = message;

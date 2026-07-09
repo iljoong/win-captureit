@@ -57,18 +57,22 @@ public static class AiCaptureService
             var tools = new List<AITool>();
             foreach (var server in settings.AiCapture.McpServers)
             {
-                if (!server.Enabled || string.IsNullOrWhiteSpace(server.Command))
+                if (!server.Enabled ||
+                    !Uri.TryCreate(server.Url, UriKind.Absolute, out var endpoint) ||
+                    (endpoint.Scheme != Uri.UriSchemeHttp && endpoint.Scheme != Uri.UriSchemeHttps))
                 {
+                    // Only enabled, absolute http/https endpoints are supported; a
+                    // local path or command line is deliberately not runnable here.
                     continue;
                 }
 
                 try
                 {
-                    var transport = new StdioClientTransport(new StdioClientTransportOptions
+                    var transport = new HttpClientTransport(new HttpClientTransportOptions
                     {
-                        Name = server.Command,
-                        Command = "cmd.exe",
-                        Arguments = ["/c", server.Command],
+                        Name = server.Url,
+                        Endpoint = endpoint,
+                        // AutoDetect (default): try Streamable HTTP first, fall back to SSE.
                     });
                     var mcpClient = await McpClient.CreateAsync(transport, cancellationToken: cancellationToken).ConfigureAwait(false);
                     mcpClients.Add(mcpClient);
